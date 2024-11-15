@@ -37,6 +37,9 @@ onMounted(() => {
   // create a new geoman instance
   const geoman = new Geoman(map, gmOptions);
 
+  // enable drawing tools
+  geoman.enableDraw('line');
+
   map.on('gm:draw', (event) => emit('gm-event', event));
   map.on('gm:edit', (event) => emit('gm-event', event));
   map.on('gm:helper', (event) => emit('gm-event', event));

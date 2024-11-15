@@ -57,21 +57,21 @@ map.on('gm:loaded', () => {
   console.log('Geoman fully loaded');
 
   // Here you can add your geojson shapes for example
-  const shapeGeoJson = {
+  const pointFeature1 = {
     type: 'Feature',
     geometry: { type: 'Point', coordinates: [0, 51] },
     properties: {},
   };
   // add a geojson shape to the map
-  geoman.features.addGeoJsonFeature({ shapeGeoJson });
+  geoman.features.addGeoJsonFeature({ shapeGeoJson: pointFeature1 });
 
 
-  const shapeGeoJson2 = {
+  const pointFeature2 = {
     type: 'Feature',
     geometry: { type: 'Point', coordinates: [3, 52] },
     properties: {},
   };
   // geoman instance is also available on the map object
-  map.gm?.features.addGeoJsonFeature({ shapeGeoJson: shapeGeoJson2 });
+  map.gm?.features.addGeoJsonFeature({ shapeGeoJson: pointFeature2 });
 
 });
