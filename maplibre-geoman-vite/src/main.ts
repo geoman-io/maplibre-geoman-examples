@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import '@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css';
 
 import ml from 'maplibre-gl';
-import { Geoman, type GmOptionsPartial } from '@geoman-io/maplibre-geoman-free';
+import { GeoJsonImportFeature, Geoman, type GmOptionsPartial } from '@geoman-io/maplibre-geoman-free';
 
 
 
@@ -57,7 +57,7 @@ map.on('gm:loaded', () => {
   console.log('Geoman fully loaded');
 
   // Here you can add your geojson shapes for example
-  const pointFeature1 = {
+  const pointFeature1: GeoJsonImportFeature = {
     type: 'Feature',
     geometry: { type: 'Point', coordinates: [0, 51] },
     properties: {},
@@ -66,7 +66,7 @@ map.on('gm:loaded', () => {
   geoman.features.addGeoJsonFeature({ shapeGeoJson: pointFeature1 });
 
 
-  const pointFeature2 = {
+  const pointFeature2: GeoJsonImportFeature = {
     type: 'Feature',
     geometry: { type: 'Point', coordinates: [3, 52] },
     properties: {},
