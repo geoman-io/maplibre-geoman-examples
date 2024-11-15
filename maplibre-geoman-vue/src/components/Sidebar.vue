@@ -1,21 +1,31 @@
 <template>
   <div class="sidebar" ref="sidebarElement">
-    <div
-      v-for="(item, index) in gmEvents"
-      :key="index"
-      class="event-item">
-      <div>
-        [{{ new Date().toLocaleTimeString() }}]
-      </div>
-      <div>
-        Action: {{ item.action }}
-      </div>
-      <template v-if="item.action === 'feature_created' || item.action === 'feature_removed'">
-        <div>Feature Id: {{ item.featureData.id }}</div>
-        <div>Feature type: {{ item.mode }}</div>
-
+    <div v-for="(item, index) in gmEvents" :key="index" class="event-item">
+      <div>[{{ item.timestamp }}]</div>
+      <div>EventType: {{ item.type }}</div>
+      <template v-if="item.type === 'gm:globaldrawmodetoggled'">
+        <div>Shape: {{ item.shape }}</div>
+        <div>Enabled: {{ item.enabled }}</div>
+      </template>
+      <template
+        v-if="item.type === 'gm:globalsnappingmodetoggled' || item.type === 'gm:globalcutmodetoggled' || item.type === 'gm:globaleditmodetoggled' || item.type === 'gm:globaldragmodetoggled' || item.type === 'gm:globalrotatemodetoggled'">
+        <div>Enabled: {{ item.enabled }}</div>
+      </template>
+      <template v-if="item.type === 'gm:create'">
+        <div>Feature Id: {{ item.id }}</div>
+        <div>Feature type: {{ item.shape }}</div>
         <div class="geojson-header" @click="() => toggleGeoJsonItem(index)">GeoJSON</div>
-        <pre v-if="expandedGeojsonItem === index" class="geojson">{{ getGeoJson(item.featureData) }}</pre>
+        <pre v-if="expandedGeojsonItem === index" class="geojson">{{ item.geojson }}</pre>
+      </template>
+      <template v-if="item.type === 'gm:remove'">
+        <div>Feature Id: {{ item.id }}</div>
+        <div>Feature type: {{ item.shape }}</div>
+      </template>
+      <template
+        v-if="item.type === 'gm:drag' || item.type === 'gm:dragend' || item.type === 'gm:editend' || item.type === 'gm:scaleend' || item.type === 'gm:rotateend' || item.type === 'gm:cut'">
+        <div>Feature Id: {{ item.id }}</div>
+        <div class="geojson-header" @click="() => toggleGeoJsonItem(index)">GeoJSON</div>
+        <pre v-if="expandedGeojsonItem === index" class="geojson">{{ item.geojson }}</pre>
       </template>
     </div>
   </div>
@@ -23,31 +33,49 @@
 
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
-import { GMEvent } from '@geoman-io/maplibre-geoman-free';
-
 
 export default defineComponent({
   name: 'Sidebar',
 
   props: {
     gmEvents: {
-      type: Array as PropType<Array<GMEvent>>,
+      type: Array as PropType<Array<any>>,
       required: true,
     },
   },
 
   data() {
     return {
+      activeTab: 'events',
       expandedGeojsonItem: -1,
+      expandedFeatureId: '',
     };
   },
 
   methods: {
+    rawEvent(input: any) {
+      let output = {};
+      for (let key in input) {
+        if (key !== 'map' && key !== 'target') {
+          output[key] = input[key];
+        }
+      }
+      return JSON.stringify(output, null, 2);
+    },
+
     toggleGeoJsonItem(index: number) {
       if (this.expandedGeojsonItem === index) {
         this.expandedGeojsonItem = -1;
       } else {
         this.expandedGeojsonItem = index;
+      }
+    },
+
+    toggleFeatureGeoJson(id: string) {
+      if (this.expandedFeatureId === id) {
+        this.expandedFeatureId = '';
+      } else {
+        this.expandedFeatureId = id;
       }
     },
 
@@ -92,6 +120,7 @@ export default defineComponent({
       padding: 0.3rem;
       cursor: pointer;
       background-color: #ffeac9;
+
       &:hover {
         font-weight: bold;
       }
