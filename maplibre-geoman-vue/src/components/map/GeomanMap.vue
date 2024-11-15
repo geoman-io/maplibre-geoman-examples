@@ -109,7 +109,7 @@ onMounted(() => {
       id: "custom-id1",
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [0, 51] },
-      properties: { foo: "bar" },
+      properties: {},
     };
     // add a geojson shape to the map
     geoman.features.addGeoJsonFeature({ shapeGeoJson: pointFeature1 });

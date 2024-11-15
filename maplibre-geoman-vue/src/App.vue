@@ -7,15 +7,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, markRaw, Ref, ref, type Raw } from 'vue';
+import { defineComponent, type Raw } from 'vue';
 import GeomanMap from '@/components/map/GeomanMap.vue';
 import Sidebar from '@/components/Sidebar.vue';
-import type { FeatureData, GMEvent } from '@geoman-io/maplibre-geoman-free';
-import ml from 'maplibre-gl';
 
 
 type ComponentData = {
-  gmEvents: Array<Raw<GMEvent>>;
+  gmEvents: Array<Raw<any>>;
 
 };
 
@@ -27,7 +25,7 @@ export default defineComponent({
 
   data(): ComponentData {
     return {
-      gmEvents: [] as Array<GMEvent>,
+      gmEvents: [] as Array<any>,
     };
   },
 
@@ -40,9 +38,8 @@ export default defineComponent({
       }
     },
 
-    handleGmEvent(event: GMEvent) {
+    handleGmEvent(event: any) {
       console.log(event);
-      const rawEvent = markRaw(event);
       this.gmEvents.push({
         id: event.feature?.id ?? undefined,
         enabled: event.enabled ?? undefined,

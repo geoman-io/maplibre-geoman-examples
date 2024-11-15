@@ -53,16 +53,6 @@ export default defineComponent({
   },
 
   methods: {
-    rawEvent(input: any) {
-      let output = {};
-      for (let key in input) {
-        if (key !== 'map' && key !== 'target') {
-          output[key] = input[key];
-        }
-      }
-      return JSON.stringify(output, null, 2);
-    },
-
     toggleGeoJsonItem(index: number) {
       if (this.expandedGeojsonItem === index) {
         this.expandedGeojsonItem = -1;
@@ -79,13 +69,6 @@ export default defineComponent({
       }
     },
 
-    getGeoJson(featureData: any) {
-      try {
-        return JSON.stringify(featureData.getGeoJson(), null, 2);
-      } catch (e) {
-        return 'Can\'t retrieve GeoJSON';
-      }
-    }
   },
 
   watch: {
