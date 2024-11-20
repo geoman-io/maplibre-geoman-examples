@@ -1,7 +1,6 @@
 <template>
   <div class="main-container">
     <GeomanMap class="map" @gm-event="handleGmEvent" />
-
     <Sidebar :gmEvents="gmEvents" class="sidebar" />
   </div>
 </template>

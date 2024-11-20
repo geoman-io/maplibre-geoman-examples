@@ -25,7 +25,7 @@
     },
   };
 
-  export const loadDevShapes = () => {
+  const loadDevShapes = () => {
     if (!geoman) {
       console.warn('Geoman not loaded yet');
       return;

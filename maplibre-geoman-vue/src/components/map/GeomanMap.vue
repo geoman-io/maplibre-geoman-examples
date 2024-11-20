@@ -4,6 +4,7 @@
 
 <script setup lang="ts">
 import { GeoJsonImportFeature, Geoman, GmOptionsPartial } from '@geoman-io/maplibre-geoman-free';
+import { demoFeatures } from '@/fixtures/features.ts';
 import ml from 'maplibre-gl';
 
 import '@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css';
@@ -49,6 +50,21 @@ onMounted(() => {
   // create a new geoman instance
   const geoman = new Geoman(map, gmOptions);
 
+  const loadDevShapes = () => {
+    if (!geoman) {
+      console.warn('Geoman not loaded yet');
+      return;
+    }
+
+    const gm = geoman;
+
+    demoFeatures.forEach((shapeGeoJson) => {
+      gm.features.addGeoJsonFeature({ shapeGeoJson });
+    });
+
+    console.log('Shapes loaded', demoFeatures);
+  };
+
   // Enable to listen to all events
   //   map.gm.setGlobalEventsListener((event: GlobalEventsListenerParemeters) => {
   //   if (event.type === 'converted') {
@@ -61,6 +77,13 @@ onMounted(() => {
   // enable drawing tools
   geoman.enableDraw('line');
 
+  // load shapes
+  map.on('gm:loaded', () => {
+    console.log('Geoman fully loaded');
+
+    // Here we can define and add a geojson shape to the map (or load it from a server)
+    loadDevShapes();
+  });
 
   // Mode events
   map.on('gm:globaldrawmodetoggled', (event) => emit('gm-event', event));
@@ -83,7 +106,7 @@ onMounted(() => {
   // Remove events
   map.on('gm:remove', (event) => emit('gm-event', event));
 
-  // Rotate events  
+  // Rotate events
   //map.on('gm:rotate', (event) => emit('gm-event', event)); // Enable to listen to all rotate events
   map.on('gm:rotatestart', (event) => emit('gm-event', event));
   map.on('gm:rotateend', (event) => emit('gm-event', event));
@@ -100,20 +123,6 @@ onMounted(() => {
   // Enable to listen to all helper and control events
   map.on('gm:helper', (event) => emit('gm-event', event));
   map.on('gm:control', (event) => emit('gm-event', event));
-
-  map.on('gm:loaded', () => {
-    console.log('Geoman fully loaded');
-
-    // Here we can define and add a geojson shape to the map (or load it from a server)
-    const pointFeature1: GeoJsonImportFeature = {
-      id: "custom-id1",
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [0, 51] },
-      properties: {},
-    };
-    // add a geojson shape to the map
-    geoman.features.addGeoJsonFeature({ shapeGeoJson: pointFeature1 });
-  });
 });
 </script>
 
