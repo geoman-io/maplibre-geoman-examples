@@ -7,6 +7,10 @@
   import { demoFeatures } from '../fixtures/features';
   import mapStyle from './maplibre-style';
 
+  const { handleEvent }: {
+    handleEvent: (event: any) => void;
+  } = $props();
+
   let map: ml.Map | null = null;
   let geoman: Geoman | null = null;
 
@@ -50,6 +54,56 @@
       console.log('Geoman loaded', geoman);
       loadDevShapes();
     });
+
+    // Enable to listen to all events
+    //   geoman.setGlobalEventsListener((event: GlobalEventsListenerParemeters) => {
+    //   if (event.type === 'converted') {
+    //     console.log('Regular event', event);
+    //   } else if (event.type === 'system') {
+    //     console.log('System event', event);
+    //   }
+    // });
+
+    // enable drawing tools
+    geoman.enableDraw('line');
+
+    // Mode events
+    map.on('gm:globaldrawmodetoggled', (event) => handleEvent(event));
+    map.on('gm:globaleditmodetoggled', (event) => handleEvent(event));
+    map.on('gm:globalremovemodetoggled', (event) => handleEvent(event));
+    map.on('gm:globalrotatemodetoggled', (event) => handleEvent(event));
+    map.on('gm:globaldragmodetoggled', (event) => handleEvent(event));
+    map.on('gm:globalcutmodetoggled', (event) => handleEvent(event));
+    map.on('gm:globalsnappingmodetoggled', (event) => handleEvent(event));
+
+    // Drawing events
+    //map.on('gm:draw', (event) => handleEvent(event)); // Enable to listen to all draw events
+    map.on('gm:create', (event) => handleEvent(event));
+
+    // Edit events
+    //map.on('gm:edit', (event) => handleEvent(event)); // Enable to listen to all edit events
+    map.on('gm:editstart', (event) => handleEvent(event));
+    map.on('gm:editend', (event) => handleEvent(event));
+
+    // Remove events
+    map.on('gm:remove', (event) => handleEvent(event));
+
+    // Rotate events
+    //map.on('gm:rotate', (event) => handleEvent(event)); // Enable to listen to all rotate events
+    map.on('gm:rotatestart', (event) => handleEvent(event));
+    map.on('gm:rotateend', (event) => handleEvent(event));
+
+    // Drag events
+    //map.on('gm:drag', (event) => handleEvent(event)); // Enable to listen to all drag events
+    map.on('gm:dragstart', (event) => handleEvent(event));
+    map.on('gm:dragend', (event) => handleEvent(event));
+
+    // Cut events
+    map.on('gm:cut', (event) => handleEvent(event));
+
+    // Enable to listen to all helper and control events
+    map.on('gm:helper', (event) => handleEvent(event));
+    map.on('gm:control', (event) => handleEvent(event));
   });
 
   onDestroy(() => {
@@ -66,5 +120,6 @@
 <style>
   #dev-map {
     flex: 1 1 auto;
+    width: 5rem;
   }
 </style>
