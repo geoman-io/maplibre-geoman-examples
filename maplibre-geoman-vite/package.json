@@ -13,7 +13,7 @@
     "vite": "^5.4.10"
   },
   "dependencies": {
-    "@geoman-io/maplibre-geoman-free": "^0.2.3",
+    "@geoman-io/maplibre-geoman-free": "^0.2.7",
     "maplibre-gl": "^4.7.1"
   }
 }

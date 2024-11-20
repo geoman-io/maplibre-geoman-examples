@@ -10,7 +10,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.node.json"
   },
   "dependencies": {
-    "@geoman-io/maplibre-geoman-free": "^0.2.6",
+    "@geoman-io/maplibre-geoman-free": "^0.2.7",
     "maplibre-gl": "^4.7.1"
   },
   "devDependencies": {

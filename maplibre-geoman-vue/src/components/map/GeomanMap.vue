@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { GeoJsonImportFeature, Geoman, GmOptionsPartial } from '@geoman-io/maplibre-geoman-free';
+import { Geoman, GmOptionsPartial } from '@geoman-io/maplibre-geoman-free';
 import { demoFeatures } from '@/fixtures/features.ts';
 import ml from 'maplibre-gl';
 
