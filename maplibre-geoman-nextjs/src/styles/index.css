@@ -35,6 +35,7 @@ body {
   border-radius: 0.3rem;
   background-color: #d8ecff;
   font-family: monospace;
+  color: black;
 }
 
 .sidebar .event-item .geojson-header {
