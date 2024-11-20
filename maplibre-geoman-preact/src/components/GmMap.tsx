@@ -105,7 +105,7 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
   }, [handleEvent]);
 
   return (
-    <div id="dev-map" ref={mapRef} style={{ flex: '1 1 auto', width: '5rem' }}>
+    <div id="dev-map" ref={mapRef}>
       {/* MapLibre Geoman container */}
     </div>
   );
