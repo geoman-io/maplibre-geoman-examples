@@ -34,7 +34,7 @@
     const gm = geoman;
 
     demoFeatures.forEach((shapeGeoJson) => {
-      gm.features.addGeoJsonFeature({ shapeGeoJson });
+      gm.features.importGeoJsonFeature(shapeGeoJson);
     });
 
     console.log('Shapes loaded', demoFeatures);
@@ -48,11 +48,12 @@
       zoom: 5,
       fadeDuration: 50,
     });
-
+    
     geoman = new Geoman(map, gmOptions);
-    map.on(`gm:loaded`, () => {
+    map.once(`gm:loaded`, () => {
       console.log('Geoman loaded', geoman);
       loadDevShapes();
+      geoman?.enableDraw('line');
     });
 
     // Enable to listen to all events
@@ -65,7 +66,6 @@
     // });
 
     // enable drawing tools
-    geoman.enableDraw('line');
 
     // Mode events
     map.on('gm:globaldrawmodetoggled', (event) => handleEvent(event));

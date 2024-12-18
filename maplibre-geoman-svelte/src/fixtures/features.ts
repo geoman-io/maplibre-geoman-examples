@@ -4,6 +4,7 @@ import type { GeoJsonImportFeature } from '@geoman-io/maplibre-geoman-free';
 export const demoFeatures: Array<GeoJsonImportFeature> = [
   {
     type: 'Feature',
+    id: "custom-id",
     properties: {
       shape: 'polygon',
     },
