@@ -50,7 +50,7 @@ const GmMap: React.FC<GmMapProps> = ({ handleEvent }) => {
         }
 
         demoFeatures.forEach((shapeGeoJson) => {
-          geomanInstance.current!.features.addGeoJsonFeature({ shapeGeoJson });
+          geomanInstance.current!.features.importGeoJsonFeature(shapeGeoJson);
         });
 
         console.log('Shapes loaded', demoFeatures);
@@ -58,11 +58,12 @@ const GmMap: React.FC<GmMapProps> = ({ handleEvent }) => {
 
       map.on('gm:loaded', () => {
         console.log('Geoman loaded', geoman);
+        // Enable drawing tools
+        geoman.enableDraw('line');
+        // Load demo shapes
         loadDevShapes();
       });
 
-      // Enable drawing tools
-      geoman.enableDraw('line');
 
       // Mode events
       map.on('gm:globaldrawmodetoggled', handleEvent);
