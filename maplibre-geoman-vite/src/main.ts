@@ -63,7 +63,7 @@ map.on('gm:loaded', () => {
     properties: {},
   };
   // add a geojson shape to the map
-  geoman.features.addGeoJsonFeature({ shapeGeoJson: pointFeature1 });
+  geoman.features.importGeoJsonFeature(pointFeature1);
 
 
   const pointFeature2: GeoJsonImportFeature = {
@@ -72,6 +72,6 @@ map.on('gm:loaded', () => {
     properties: {},
   };
   // geoman instance is also available on the map object
-  map.gm?.features.addGeoJsonFeature({ shapeGeoJson: pointFeature2 });
+  map.gm?.features.importGeoJsonFeature(pointFeature2);
 
 });
