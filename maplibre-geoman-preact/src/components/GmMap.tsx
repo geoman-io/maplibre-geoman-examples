@@ -50,7 +50,7 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
         }
 
         demoFeatures.forEach((shapeGeoJson) => {
-          geomanInstance.current!.features.addGeoJsonFeature({ shapeGeoJson });
+          geomanInstance.current!.features.importGeoJsonFeature(shapeGeoJson);
         });
 
         console.log('Shapes loaded', demoFeatures);
@@ -59,10 +59,12 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
       map.on('gm:loaded', () => {
         console.log('Geoman loaded', geoman);
         loadDevShapes();
+
+        // Enable drawing tools
+        geoman.enableDraw('line');
       });
 
-      // Enable drawing tools
-      geoman.enableDraw('line');
+
 
       // Event handler
       const eventHandler = (event: GmEvent) => {
