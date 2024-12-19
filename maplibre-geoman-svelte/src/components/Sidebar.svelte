@@ -64,9 +64,16 @@
 
       {#if [
         'gm:drag',
+        'gm:dragstart',
         'gm:dragend',
+        'gm:edit',
+        'gm:editstart',
         'gm:editend',
+        'gm:scale',
+        'gm:scalestart',
         'gm:scaleend',
+        'gm:rotate',
+        'gm:rotatestart',
         'gm:rotateend',
         'gm:cut'
       ].includes(item.type)}
