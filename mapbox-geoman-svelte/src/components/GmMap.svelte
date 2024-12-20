@@ -1,12 +1,11 @@
 <script lang="ts">
   import mapboxgl from 'mapbox-gl';
-  import { Geoman, type GmOptionsPartial } from '@geoman-io/maplibre-geoman-free';
+  import { Geoman, type GmOptionsPartial } from '@geoman-io/mapbox-geoman-free';
   import { onDestroy, onMount } from 'svelte';
-  import '@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css';
+  import '@geoman-io/mapbox-geoman-free/dist/mapbox-geoman.css';
   import 'mapbox-gl/dist/mapbox-gl.css';
 
   import { demoFeatures } from '../fixtures/features';
-  import mapStyle from './maplibre-style';
 
   const { handleEvent }: {
     handleEvent: (event: any) => void;
