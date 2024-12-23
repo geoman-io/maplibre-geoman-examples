@@ -59,7 +59,7 @@ onMounted(() => {
     const gm = geoman;
 
     demoFeatures.forEach((shapeGeoJson) => {
-      gm.features.addGeoJsonFeature({ shapeGeoJson });
+      gm.features.importGeoJsonFeature(shapeGeoJson);
     });
 
     console.log('Shapes loaded', demoFeatures);
@@ -74,15 +74,15 @@ onMounted(() => {
   //   }
   // });
 
-  // enable drawing tools
-  geoman.enableDraw('line');
-
   // load shapes
   map.on('gm:loaded', () => {
     console.log('Geoman fully loaded');
 
     // Here we can define and add a geojson shape to the map (or load it from a server)
     loadDevShapes();
+
+    // enable drawing tools
+    geoman.enableDraw('line');
   });
 
   // Mode events

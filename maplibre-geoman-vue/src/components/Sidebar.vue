@@ -21,8 +21,7 @@
         <div>Feature Id: {{ item.id }}</div>
         <div>Feature type: {{ item.shape }}</div>
       </template>
-      <template
-        v-if="item.type === 'gm:drag' || item.type === 'gm:dragend' || item.type === 'gm:editend' || item.type === 'gm:scaleend' || item.type === 'gm:rotateend' || item.type === 'gm:cut'">
+      <template v-if="shouldShowFeatureDetails(item.type)">
         <div>Feature Id: {{ item.id }}</div>
         <div class="geojson-header" @click="() => toggleGeoJsonItem(index)">GeoJSON</div>
         <pre v-if="expandedGeojsonItem === index" class="geojson">{{ item.geojson }}</pre>
@@ -53,6 +52,24 @@ export default defineComponent({
   },
 
   methods: {
+    shouldShowFeatureDetails(type: string): boolean {
+      const featureDetailTypes = [
+        'gm:drag',
+        'gm:dragstart',
+        'gm:dragend',
+        'gm:edit',
+        'gm:editstart',
+        'gm:editend',
+        'gm:scale',
+        'gm:scalestart',
+        'gm:scaleend',
+        'gm:rotate',
+        'gm:rotatestart',
+        'gm:rotateend',
+        'gm:cut'
+      ];
+      return featureDetailTypes.includes(type);
+    },
     toggleGeoJsonItem(index: number) {
       if (this.expandedGeojsonItem === index) {
         this.expandedGeojsonItem = -1;
