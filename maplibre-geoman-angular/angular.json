@@ -22,8 +22,6 @@
               "src/assets"
             ],
             "styles": [
-              "node_modules/normalize.css/normalize.css",
-              "node_modules/maplibre-gl/dist/maplibre-gl.css",
               "src/styles.scss"
             ],
             "allowedCommonJsDependencies": [

@@ -32,6 +32,10 @@ export class SidebarComponent implements OnChanges {
   expandedGeojsonItem = -1;
   expandedFeatureId = '';
 
+  constructor(hostEl: ElementRef<HTMLDivElement>) {
+    this.sidebarElement = hostEl;
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['gmEvents'] && this.sidebarElement) {
       setTimeout(() => {

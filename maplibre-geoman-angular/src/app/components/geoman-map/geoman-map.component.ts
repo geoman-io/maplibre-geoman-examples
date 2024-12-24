@@ -1,5 +1,5 @@
-import { Component, ElementRef, EventEmitter, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, ElementRef, EventEmitter, OnInit, Output, ViewChild } from '@angular/core';
 
 import { Geoman, GmOptionsPartial } from '@geoman-io/maplibre-geoman-free';
 import * as ml from 'maplibre-gl';
@@ -48,7 +48,10 @@ export class GeomanMapComponent implements OnInit {
     // Load some demo shapes
     const loadDevShapes = () => {
       demoFeatures.forEach(shapeGeoJson => {
-        geoman.features.addGeoJsonFeature({ shapeGeoJson });
+        geoman.features.addGeoJsonFeature({
+          shapeGeoJson,
+          defaultSource: true,
+        });
       });
       console.log('Shapes loaded', demoFeatures);
     };
