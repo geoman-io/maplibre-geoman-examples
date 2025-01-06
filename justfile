@@ -16,6 +16,4 @@ build-svelte:
   cd maplibre-geoman-svelte; npm install; npm run build
 
 build-nextjs:
-  cd maplibre-geoman-nextjs
-  npm install
-  npm run build
+  cd maplibre-geoman-nextjs && npm install && npm run build
