@@ -1,0 +1,61 @@
+<div
+  class="event-item"
+  *ngFor="let item of gmEvents; let index = index"
+  [attr.data-index]="index"
+>
+  <div>[{{ item.timestamp }}]</div>
+  <div>EventType: {{ item.type }}</div>
+
+  <!-- gm:globaldrawmodetoggled -->
+  <ng-container *ngIf="item.type === 'gm:globaldrawmodetoggled'">
+    <div>Shape: {{ item.shape }}</div>
+    <div>Enabled: {{ item.enabled }}</div>
+  </ng-container>
+
+  <!-- Toggling events -->
+  <ng-container
+    *ngIf="
+        item.type === 'gm:globalsnappingmodetoggled' ||
+        item.type === 'gm:globalcutmodetoggled' ||
+        item.type === 'gm:globaleditmodetoggled' ||
+        item.type === 'gm:globaldragmodetoggled' ||
+        item.type === 'gm:globalrotatemodetoggled'
+      "
+  >
+    <div>Enabled: {{ item.enabled }}</div>
+  </ng-container>
+
+  <!-- Create event -->
+  <ng-container *ngIf="item.type === 'gm:create'">
+    <div>Feature Id: {{ item.id }}</div>
+    <div>Feature type: {{ item.shape }}</div>
+    <div class="geojson-header" (click)="toggleGeoJsonItem(index)">GeoJSON</div>
+    <pre *ngIf="expandedGeojsonItem === index" class="geojson">
+{{ item.geojson }}
+      </pre>
+  </ng-container>
+
+  <!-- Remove event -->
+  <ng-container *ngIf="item.type === 'gm:remove'">
+    <div>Feature Id: {{ item.id }}</div>
+    <div>Feature type: {{ item.shape }}</div>
+  </ng-container>
+
+  <!-- Drag, edit, scale, rotate, cut events -->
+  <ng-container
+    *ngIf="
+        item.type === 'gm:drag' ||
+        item.type === 'gm:dragend' ||
+        item.type === 'gm:editend' ||
+        item.type === 'gm:scaleend' ||
+        item.type === 'gm:rotateend' ||
+        item.type === 'gm:cut'
+      "
+  >
+    <div>Feature Id: {{ item.id }}</div>
+    <div class="geojson-header" (click)="toggleGeoJsonItem(index)">GeoJSON</div>
+    <pre *ngIf="expandedGeojsonItem === index" class="geojson">
+{{ item.geojson }}
+      </pre>
+  </ng-container>
+</div>

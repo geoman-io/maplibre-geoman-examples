@@ -1,0 +1,33 @@
+:host(.sidebar) {
+  padding: 0.5rem;
+  background-color: #f8f8f8;
+  border-left: 1px solid #cdcdcd;
+  overflow-y: auto;
+
+  .event-item {
+    padding: 0.3rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.3rem;
+    background-color: #d8ecff;
+    font-family: monospace;
+
+    .geojson-header {
+      margin-top: 0.5rem;
+      padding: 0.3rem;
+      cursor: pointer;
+      background-color: #ffeac9;
+
+      &:hover {
+        font-weight: bold;
+      }
+    }
+
+    .geojson {
+      margin: 0;
+      padding: 0.3rem;
+      font-size: 0.8rem;
+      background-color: #fbf5e2;
+      white-space: pre-wrap; /* so the JSON doesn't scroll horizontally */
+    }
+  }
+}
