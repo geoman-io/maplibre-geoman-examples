@@ -17,3 +17,13 @@ build-svelte:
 
 build-nextjs:
   cd maplibre-geoman-nextjs && npm install && npm run build
+
+fix:
+  cd maplibre-geoman-svelte && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
+  cd maplibre-geoman-nextjs  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
+  cd maplibre-geoman-preact  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
+  cd maplibre-geoman-react  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
+  cd maplibre-geoman-vite  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
+  cd maplibre-geoman-vue  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
+  cd mapbox-geoman-svelte  && npm uninstall @geoman-io/mapbox-geoman-free && npm install @geoman-io/mapbox-geoman-free
+  
