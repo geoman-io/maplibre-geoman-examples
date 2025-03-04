@@ -1,37 +1,37 @@
-import './style.css'
+import "./style.css";
 
-import 'maplibre-gl/dist/maplibre-gl.css';
-import '@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css';
+import "maplibre-gl/dist/maplibre-gl.css";
+import "@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css";
 
-import ml from 'maplibre-gl';
-import { GeoJsonImportFeature, Geoman, type GmOptionsPartial } from '@geoman-io/maplibre-geoman-free';
+import ml from "maplibre-gl";
+import {
+  GeoJsonImportFeature,
+  Geoman,
+  type GmOptionsPartial,
+} from "@geoman-io/maplibre-geoman-free";
 
-
-
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
+document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>MapLibre-Geoman Demo map
         <div id="dev-map"></div>
   </div>
-`
+`;
 
 const mapLibreStyle: ml.StyleSpecification = {
   version: 8,
-  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   sources: {
-    'osm-tiles': {
-      type: 'raster',
-      tiles: [
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      ],
+    "osm-tiles": {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
+      attribution: "© OpenStreetMap contributors",
     },
   },
   layers: [
     {
-      id: 'osm-tiles-layer',
-      type: 'raster',
-      source: 'osm-tiles',
+      id: "osm-tiles-layer",
+      type: "raster",
+      source: "osm-tiles",
       minzoom: 0,
       maxzoom: 19,
     },
@@ -39,7 +39,7 @@ const mapLibreStyle: ml.StyleSpecification = {
 };
 
 const map = new ml.Map({
-  container: 'dev-map',
+  container: "dev-map",
   style: mapLibreStyle,
   center: [0, 51],
   zoom: 5,
@@ -53,25 +53,23 @@ const gmOptions: GmOptionsPartial = {
 const geoman = new Geoman(map, gmOptions);
 
 // callback when geoman is fully loaded
-map.on('gm:loaded', () => {
-  console.log('Geoman fully loaded');
+map.on("gm:loaded", () => {
+  console.log("Geoman fully loaded");
 
   // Here you can add your geojson shapes for example
   const pointFeature1: GeoJsonImportFeature = {
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: [0, 51] },
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [0, 51] },
     properties: {},
   };
   // add a geojson shape to the map
   geoman.features.importGeoJsonFeature(pointFeature1);
 
-
   const pointFeature2: GeoJsonImportFeature = {
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: [3, 52] },
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [3, 52] },
     properties: {},
   };
   // geoman instance is also available on the map object
-  map.gm?.features.importGeoJsonFeature(pointFeature2);
-
+  geoman.features.importGeoJsonFeature(pointFeature2);
 });
