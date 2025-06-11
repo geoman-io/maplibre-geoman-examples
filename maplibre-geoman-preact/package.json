@@ -10,7 +10,7 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "@geoman-io/maplibre-geoman-free": "^0.3.0",
+    "@geoman-io/maplibre-geoman-free": "^0.4.7",
     "maplibre-gl": "^5.0.1",
     "preact": "^10.25.4"
   },
