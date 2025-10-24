@@ -11,8 +11,8 @@ import {
 } from "@geoman-io/maplibre-geoman-free";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <div>MapLibre-Geoman Demo map
-        <div id="dev-map"></div>
+  <div>
+    <div id="dev-map"></div>
   </div>
 `;
 
