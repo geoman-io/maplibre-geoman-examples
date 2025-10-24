@@ -31,20 +31,14 @@ onMounted(() => {
 
 
   const gmOptions: GmOptionsPartial = {
-    settings: {
-      eventPrefix: 'gm',
-    },
-    // geoman options here
     controls: {
-      edit: {
-        drag: {
+      helper: {
+        snapping: {
           uiEnabled: true,
+          active: true,
         },
-        edit: {
-          uiEnabled: true,
-        }
       },
-    }
+    },
   };
 
   // create a new geoman instance

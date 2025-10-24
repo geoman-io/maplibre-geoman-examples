@@ -1,4 +1,4 @@
-build: build-vue build-vite build-react build-preact build-svelte build-nextjs
+build: build-angular build-vue build-vite build-react build-preact build-svelte build-nextjs
 
 build-vue:
   cd maplibre-geoman-vue; npm install; npm run build
@@ -17,6 +17,9 @@ build-svelte:
 
 build-nextjs:
   cd maplibre-geoman-nextjs && npm install && npm run build
+
+build-angular:
+  cd maplibre-geoman-angular && npm install && npm run build
 
 fix:
   cd maplibre-geoman-svelte && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
