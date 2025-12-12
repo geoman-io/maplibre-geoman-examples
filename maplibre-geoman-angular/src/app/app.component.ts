@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 
 import { SidebarComponent } from './components/sidebar/sidebar.component';
@@ -15,16 +15,14 @@ interface GmEvent {
 }
 
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [
-    CommonModule,
+    selector: 'app-root',
+    imports: [
     FormsModule,
     SidebarComponent,
     GeomanMapComponent
-  ],
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
+],
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
   gmEvents: GmEvent[] = [];

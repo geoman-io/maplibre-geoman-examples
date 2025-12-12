@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, ElementRef, EventEmitter, OnInit, Output, ViewChild } from '@angular/core';
 
 import { Geoman, GmOptionsPartial } from '@geoman-io/maplibre-geoman-free';
@@ -8,11 +8,10 @@ import { demoFeatures } from '../../fixtures/features';
 import mapStyle from './style';
 
 @Component({
-  selector: 'app-geoman-map',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './geoman-map.component.html',
-  styleUrls: ['./geoman-map.component.scss'],
+    selector: 'app-geoman-map',
+    imports: [],
+    templateUrl: './geoman-map.component.html',
+    styleUrls: ['./geoman-map.component.scss']
 })
 export class GeomanMapComponent implements OnInit {
   @ViewChild('mapElement', { static: true }) mapElement!: ElementRef<HTMLDivElement>;
