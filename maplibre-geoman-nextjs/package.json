@@ -10,17 +10,17 @@
   },
   "dependencies": {
     "@geoman-io/maplibre-geoman-free": "^0.5.6",
-    "next": "15.5.6",
-    "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "next": "16.0.10",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
-    "@types/node": "^22",
+    "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.1.5",
+    "eslint-config-next": "16.0.10",
     "postcss": "^8",
     "tailwindcss": "^4.1.18",
     "typescript": "^5"
