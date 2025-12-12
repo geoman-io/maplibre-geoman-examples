@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "typescript": "~5.7.2",
-    "vite": "^6.4.1"
+    "typescript": "~5.9.3",
+    "vite": "^7.2.7"
   },
   "dependencies": {
     "@geoman-io/maplibre-geoman-free": "^0.5.6"
