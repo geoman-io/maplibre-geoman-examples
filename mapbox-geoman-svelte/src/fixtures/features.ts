@@ -1,4 +1,4 @@
-import type { GeoJsonImportFeature } from '@geoman-io/maplibre-geoman-free';
+import type { GeoJsonImportFeature } from '@geoman-io/mapbox-geoman-free';
 
 
 export const demoFeatures: Array<GeoJsonImportFeature> = [

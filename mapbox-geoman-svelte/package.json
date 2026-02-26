@@ -10,17 +10,17 @@
     "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.node.json"
   },
   "dependencies": {
-    "@geoman-io/mapbox-geoman-free": "^0.2.27",
-    "mapbox-gl": "^3.9.0"
+    "@geoman-io/mapbox-geoman-free": "^0.0.1-alpha.2",
+    "mapbox-gl": "^3.19.0"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "@tsconfig/svelte": "^5.0.4",
-    "sass": "^1.83.0",
-    "svelte": "^5.14.4",
-    "svelte-check": "^4.1.1",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@tsconfig/svelte": "^5.0.8",
+    "sass": "^1.97.3",
+    "svelte": "^5.53.5",
+    "svelte-check": "^4.4.3",
     "tslib": "^2.8.1",
-    "typescript": "~5.7.2",
-    "vite": "^6.0.4"
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
   }
 }
