@@ -10,7 +10,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.node.json"
   },
   "dependencies": {
-    "@geoman-io/mapbox-geoman-free": "^0.0.1-alpha.2",
+    "@geoman-io/mapbox-geoman-free": "^0.7.0",
     "mapbox-gl": "^3.19.0"
   },
   "devDependencies": {
