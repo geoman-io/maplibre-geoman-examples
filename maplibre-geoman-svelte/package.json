@@ -1,6 +1,7 @@
 {
   "name": "maplibre-geoman-svelte",
   "private": true,
+  "packageManager": "pnpm@11.7.0",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
