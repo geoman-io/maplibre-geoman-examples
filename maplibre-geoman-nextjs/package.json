@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@geoman-io/maplibre-geoman-free": "^0.7.0",
+    "@geoman-io/maplibre-geoman-free": "^0.8.3",
     "next": "16.1.6",
     "react": "19.2.4",
     "react-dom": "19.2.4"

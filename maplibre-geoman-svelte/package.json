@@ -20,6 +20,6 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
-    "@geoman-io/maplibre-geoman-free": "^0.7.0"
+    "@geoman-io/maplibre-geoman-free": "^0.8.3"
   }
 }
