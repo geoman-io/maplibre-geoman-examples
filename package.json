@@ -1,1 +1,17 @@
-{}
+{
+  "name": "geoman-examples",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Framework example apps for @geoman-io maplibre/mapbox Geoman, managed as a pnpm workspace.",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=22.22.3"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "check": "pnpm -r --if-present check",
+    "lint": "pnpm -r --if-present lint",
+    "clean": "pnpm -r exec rm -rf dist .next .angular && rm -rf node_modules"
+  }
+}

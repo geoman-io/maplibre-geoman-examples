@@ -1,32 +1,37 @@
-build: build-angular build-vue build-vite build-react build-preact build-svelte build-nextjs
+# This repo is a pnpm workspace (see pnpm-workspace.yaml).
+# pnpm is pinned via the root package.json "packageManager" field (pnpm@11.7.0).
+# Node is pinned via .tool-versions (Angular 22 requires Node >= 22.22.3).
 
-build-vue:
-  cd maplibre-geoman-vue; npm install; npm run build
+# Install all workspace dependencies (single lockfile at the root).
+install:
+  pnpm install
 
-build-vite:
-  cd maplibre-geoman-vite; npm install; npm run build
+# Build every example app.
+build:
+  pnpm -r build
 
-build-react:
-  cd maplibre-geoman-react; npm install; npm run build
+# Type-check / svelte-check the apps that expose a "check" script.
+check:
+  pnpm -r --if-present check
 
-build-preact:
-  cd maplibre-geoman-preact; npm install; npm run build
+# Lint the apps that expose a "lint" script.
+lint:
+  pnpm -r --if-present lint
 
-build-svelte:
-  cd maplibre-geoman-svelte; npm install; npm run build
+# Run every app's dev server in parallel.
+dev:
+  pnpm -r --parallel dev
 
-build-nextjs:
-  cd maplibre-geoman-nextjs && npm install && npm run build
+# Build a single app, e.g. `just app maplibre-geoman-react`.
+app name:
+  pnpm --filter ./{{name}} build
 
-build-angular:
-  cd maplibre-geoman-angular && npm install && npm run build
+# Remove build artifacts and node_modules across the workspace.
+clean:
+  pnpm -r exec rm -rf dist .next .angular
+  rm -rf node_modules
 
-fix:
-  cd maplibre-geoman-svelte && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
-  cd maplibre-geoman-nextjs  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
-  cd maplibre-geoman-preact  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
-  cd maplibre-geoman-react  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
-  cd maplibre-geoman-vite  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
-  cd maplibre-geoman-vue  && npm uninstall @geoman-io/maplibre-geoman-free && npm install @geoman-io/maplibre-geoman-free
-  cd mapbox-geoman-svelte  && npm uninstall @geoman-io/mapbox-geoman-free && npm install @geoman-io/mapbox-geoman-free
-  
+# Bump the Geoman libraries to their latest published versions in the catalog,
+# then refresh the lockfile. Versions live in pnpm-workspace.yaml (catalog:).
+update-geoman:
+  pnpm up -r --latest "@geoman-io/maplibre-geoman-free" "@geoman-io/mapbox-geoman-free"

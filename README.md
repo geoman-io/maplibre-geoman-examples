@@ -6,6 +6,53 @@ Find the OS version of [Maplibre-Geoman here](https://github.com/geoman-io/mapli
 
 Check out the full power of MapLibre-Geoman Pro on https://geoman.io/demo/maplibre
 
+## Development
+
+This repository is a [pnpm workspace](https://pnpm.io/workspaces). Every example app
+is a workspace package, sharing a single lockfile and a centralized dependency
+**catalog**.
+
+### Requirements
+
+- **pnpm 11** — pinned via the root `package.json` `packageManager` field
+  (`pnpm@11.7.0`). With Corepack enabled (`corepack enable`) the correct version
+  is used automatically.
+- **Node.js ≥ 22.22.3** — required by Angular 22. The version is pinned in
+  `.tool-versions` (`nodejs 24.16.0`). Other apps run on Node 20.19+, but the
+  workspace floor is set by Angular.
+
+### Commands
+
+Run these from the repository root:
+
+```bash
+pnpm install        # install all apps (one lockfile)
+pnpm build          # build every example  (pnpm -r build)
+pnpm check          # type-check apps that expose a "check" script
+pnpm lint           # lint apps that expose a "lint" script
+pnpm dev            # run every dev server in parallel
+```
+
+Work on a single app with a filter, e.g.:
+
+```bash
+pnpm --filter ./maplibre-geoman-react dev
+```
+
+A `justfile` mirrors these commands (`just build`, `just check`, etc.).
+
+### Dependency versions (catalog)
+
+Shared dependency versions — including the Geoman libraries, `maplibre-gl`,
+`mapbox-gl`, TypeScript, Vite, and the framework toolchains — live in a single
+`catalog:` in [`pnpm-workspace.yaml`](./pnpm-workspace.yaml). Each app references
+them with `"catalog:"`, so bumping a version once there updates every example.
+Bump the Geoman libraries with `just update-geoman`.
+
+> `maplibre-gl` is a peer dependency of `@geoman-io/maplibre-geoman-free` and is
+> declared explicitly in each maplibre app, since pnpm's strict `node_modules`
+> (unlike npm) does not hoist undeclared peers.
+
 ## Contributing
 
 If you have examples that you want to share about your usage of Geoman, please fork this repo and submit a pull request.
