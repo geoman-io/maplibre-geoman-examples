@@ -72,17 +72,18 @@ export class EditorController {
   private wireEvents() {
     const map = this.gm.mapAdapter.getMapInstance() as unknown as maplibregl.Map;
 
-    map.on('gm:create', async (e: { feature: FeatureData; shape: string }) => {
+    map.on('gm:create', async (e: { feature: FeatureData; shape?: string }) => {
       const layerId = layerIdFromSource(e.feature.source.id) ?? store().activeLayerId;
       if (!layerId) return;
-      await e.feature.updateProperties({ metadata: {}, shape: e.shape });
+      // Read straight from the feature — do NOT mutate it here (updateProperties
+      // would record a second history entry, making one draw take two undos).
       const read = readFeatureData(e.feature);
       const dto = await api.upsertFeature({
         id: read.id,
         layerId,
-        shape: e.shape,
+        shape: e.shape ?? read.shape,
         geojson: read.geojson,
-        metadata: {},
+        metadata: read.metadata,
       });
       store().upsertFeature(dto);
       store().setSelectedFeature(read.id);
@@ -115,6 +116,59 @@ export class EditorController {
       const id = e.selection[0];
       store().setSelectedFeature(id != null ? String(id) : null);
     });
+
+    map.on('gm:history', (e: { canUndo: boolean; canRedo: boolean }) => {
+      store().setHistory(e.canUndo, e.canRedo);
+    });
+  }
+
+  undo() {
+    return this.gm.history.undo();
+  }
+
+  redo() {
+    return this.gm.history.redo();
+  }
+
+  /** Copy the selected feature's geometry to the in-app clipboard (Ctrl+C). */
+  copySelected() {
+    const id = store().selectedFeatureId;
+    if (!id) return;
+    const row = store().features[id];
+    if (row) store().setClipboard(row.geojson);
+  }
+
+  /** Paste the clipboard geometry as a new feature in the active layer, nudged
+   *  slightly south-east so it doesn't land exactly on the original (Ctrl+V). */
+  async paste() {
+    const clip = store().clipboard as Feature | null;
+    const layerId = store().activeLayerId;
+    if (!clip || !layerId) return;
+    const offset = (geom: Feature['geometry']): Feature['geometry'] => {
+      const shift = ([x, y]: number[]): number[] => [x + 0.05, y - 0.05];
+      const walk = (c: unknown): unknown =>
+        Array.isArray(c) && typeof c[0] === 'number' ? shift(c as number[]) : (c as unknown[]).map(walk);
+      return { ...geom, coordinates: walk((geom as { coordinates: unknown }).coordinates) } as Feature['geometry'];
+    };
+    const id = crypto.randomUUID();
+    const shape = inferShape(clip.geometry);
+    const geojson: Feature = { type: 'Feature', properties: {}, geometry: offset(clip.geometry) };
+    const dto = await api.upsertFeature({ id, layerId, shape, geojson, metadata: {} });
+    store().upsertFeature(dto);
+    this.gm.dataLayers.setData(layerId, featuresOf(layerId).map(toGeoJson));
+    store().setSelectedFeature(id);
+  }
+
+  /** Delete the currently selected feature (Del / toolbar). */
+  async deleteSelected() {
+    const id = store().selectedFeatureId;
+    if (!id) return;
+    const fd = findFeature(this.gm, id);
+    if (fd) await this.gm.features.delete(fd);
+    if (store().features[id]) {
+      store().removeFeature(id);
+      await api.deleteFeature(id).catch(() => {});
+    }
   }
 
   /** Register a layer with Geoman as either the editable layer or a display layer. */

@@ -10,6 +10,7 @@ import LayerPanel from '@/components/overlays/LayerPanel';
 import MetadataEditor from '@/components/overlays/MetadataEditor';
 import AttributeTable from '@/components/overlays/AttributeTable';
 import { useEditorStore } from '@/hooks/useEditorStore';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSession } from '@/lib/auth-client';
 import { EditorController } from '@/lib/geoman/editorController';
 
@@ -17,6 +18,7 @@ export default function MapView() {
   const { data: session, isPending } = useSession();
   const [handle, setHandle] = useState<GisMapHandle | null>(null);
   const [controller, setController] = useState<EditorController | null>(null);
+  useKeyboardShortcuts(handle?.gm ?? null, controller);
   const [tableOpen, setTableOpen] = useState(false);
   const hydrated = useEditorStore((s) => s.hydrated);
   const initForUser = useRef<string | null>(null);

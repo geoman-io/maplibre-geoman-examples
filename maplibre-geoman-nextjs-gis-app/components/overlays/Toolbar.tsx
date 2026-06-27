@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Geoman } from '@geoman-io/maplibre-geoman-pro';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import type { EditorController } from '@/lib/geoman/editorController';
@@ -40,6 +40,8 @@ const I: Record<string, ReactNode> = {
   measure: S(<><path d="M2 14 14 2l8 8L10 22Z" /><path d="M7 9l2 2M10 6l2 2M13 9l2 2M16 6l2 2" /></>),
   snap: S(<><path d="M5 5h6v6" /><path d="M5 5l8 8" /><circle cx="17" cy="17" r="3" /></>),
   zoom: S(<><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3M11 8v6M8 11h6" /></>),
+  undo: S(<><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-4" /></>),
+  redo: S(<><path d="m15 14 5-5-5-5" /><path d="M20 9H9a5 5 0 0 0 0 10h4" /></>),
 };
 
 type Tool = {
@@ -122,6 +124,8 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
   // Every edit/draw tool needs a layer to write into — without one a drawn
   // shape would land in no layer and never persist.
   const hasActiveLayer = useEditorStore((s) => s.activeLayerId !== null);
+  const canUndo = useEditorStore((s) => s.canUndo);
+  const canRedo = useEditorStore((s) => s.canRedo);
 
   const findTitle = (key: string) =>
     GROUPS.flatMap((g) => g.tools).find((t) => t.id === key)?.title ?? null;
@@ -138,6 +142,19 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
     setActive(key);
     useEditorStore.getState().setActiveTool(findTitle(key));
   };
+
+  // Fluid selection: rest in the Select tool once a layer exists, so clicking a
+  // feature selects it immediately without first picking a tool.
+  const defaulted = useRef(false);
+  useEffect(() => {
+    if (defaulted.current || !hasActiveLayer) return;
+    defaulted.current = true;
+    void (async () => {
+      await gm.enableMode('edit', 'select' as never);
+      setActive('select');
+      useEditorStore.getState().setActiveTool('Select');
+    })();
+  }, [hasActiveLayer, gm]);
 
   const toggleHelper = async (id: 'measurements' | 'snapping') => {
     const next = !helpers[id];
@@ -167,6 +184,9 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
 
   return (
     <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] items-center gap-0.5 overflow-x-auto rounded-xl bg-white/95 p-1.5 shadow-lg ring-1 ring-black/5 backdrop-blur">
+      {tbtn('undo', 'undo', 'Undo (⌘Z)', () => void controller.undo(), { disabled: !canUndo })}
+      {tbtn('redo', 'redo', 'Redo (⇧⌘Z)', () => void controller.redo(), { disabled: !canRedo })}
+      {sep('sep-history')}
       {GROUPS.map((g, gi) => (
         <div key={g.name} className="flex items-center gap-0.5">
           {gi > 0 && sep(`sep-${g.name}`)}
