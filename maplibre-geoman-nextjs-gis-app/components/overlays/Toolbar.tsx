@@ -47,7 +47,10 @@ const I: Record<string, ReactNode> = {
 type Tool = {
   id: string;
   icon: string;
+  /** Short accessible name (aria-label, status bar). */
   title: string;
+  /** Longer tooltip describing a non-obvious multi-step interaction. */
+  hint?: string;
   run: (gm: Geoman) => Promise<void> | void;
   needsSelection?: boolean;
 };
@@ -58,10 +61,17 @@ const draw = (id: string, icon: string, title: string): Tool => ({
   title,
   run: (gm) => gm.enableDraw(id as never),
 });
-const edit = (id: string, icon: string, title: string, needsSelection = false): Tool => ({
+const edit = (
+  id: string,
+  icon: string,
+  title: string,
+  needsSelection = false,
+  hint?: string,
+): Tool => ({
   id,
   icon,
   title,
+  hint,
   needsSelection,
   run: (gm) => gm.enableMode('edit', id as never),
 });
@@ -92,14 +102,14 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
   {
     name: 'Geometry',
     tools: [
-      edit('split', 'split', 'Split — draw a line across a shape'),
-      edit('union', 'union', 'Union — click two overlapping shapes'),
-      edit('difference', 'difference', 'Difference — click two overlapping shapes'),
+      edit('split', 'split', 'Split', false, 'Split — draw a line across a shape'),
+      edit('union', 'union', 'Union', false, 'Union — click two overlapping shapes'),
+      edit('difference', 'difference', 'Difference', false, 'Difference — click two overlapping shapes'),
       edit('add_part', 'add_part', 'Add part', true),
-      edit('add_hole', 'add_hole', 'Add hole — draw a ring inside', true),
-      edit('remove_ring', 'remove_ring', 'Remove ring — click a hole', true),
+      edit('add_hole', 'add_hole', 'Add hole', true, 'Add hole — draw a ring inside a polygon'),
+      edit('remove_ring', 'remove_ring', 'Remove ring', true, 'Remove ring — click a hole'),
       edit('merge_parts', 'merge_parts', 'Merge parts', true),
-      edit('line_simplification', 'simplify', 'Simplify — click two vertices on a line'),
+      edit('line_simplification', 'simplify', 'Simplify', false, 'Simplify — click two vertices on a line'),
     ],
   },
   {
@@ -161,10 +171,10 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
     await gm.toggleMode('helper', id);
   };
 
-  const tbtn = (key: string, icon: string, title: string, onClick: () => void, opts: { on?: boolean; disabled?: boolean } = {}) => (
+  const tbtn = (key: string, icon: string, title: string, onClick: () => void, opts: { on?: boolean; disabled?: boolean; tooltip?: string } = {}) => (
     <button
       key={key}
-      title={title}
+      title={opts.tooltip ?? title}
       aria-label={title}
       aria-pressed={opts.on}
       disabled={opts.disabled}
@@ -198,6 +208,7 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
               {
                 on: activeTool?.key === t.id,
                 disabled: !hasActiveLayer || (t.needsSelection && !hasSelection),
+                tooltip: t.hint,
               },
             ),
           )}
