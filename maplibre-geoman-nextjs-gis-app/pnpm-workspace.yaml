@@ -1,0 +1,8 @@
+# Standalone workspace root for the Pro GIS demo (kept out of the parent
+# examples workspace so the private @geoman-io registry stays scoped here).
+# sharp / unrs-resolver ship prebuilt binaries; approving their build scripts
+# silences ERR_PNPM_IGNORED_BUILDS without changing behaviour.
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true

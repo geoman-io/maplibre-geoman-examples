@@ -1,0 +1,1 @@
+ALTER TABLE "layer" ADD COLUMN "border_color" text DEFAULT '#1d4ed8' NOT NULL;

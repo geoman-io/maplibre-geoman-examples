@@ -1,0 +1,28 @@
+import type { StyleSpecification } from 'maplibre-gl';
+
+// A plain OSM raster basemap. Kept deliberately minimal so the Geoman editing
+// layers are the focus. Swap `sources`/`layers` for a vector style + your own
+// glyphs/sprite when you want a richer basemap.
+const mapStyle: StyleSpecification = {
+  version: 8,
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  sources: {
+    'osm-tiles': {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [
+    {
+      id: 'osm-tiles-layer',
+      type: 'raster',
+      source: 'osm-tiles',
+      minzoom: 0,
+      maxzoom: 19,
+    },
+  ],
+};
+
+export default mapStyle;

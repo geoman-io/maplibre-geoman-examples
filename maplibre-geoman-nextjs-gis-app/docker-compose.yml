@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: geoman-gis-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: geoman
+      POSTGRES_PASSWORD: geoman
+      POSTGRES_DB: geoman_gis
+    ports:
+      - "5435:5432" # host port chosen to avoid clashing with other local Postgres instances
+    volumes:
+      - geoman_gis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geoman -d geoman_gis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  geoman_gis_data:

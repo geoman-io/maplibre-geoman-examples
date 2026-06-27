@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Let the MapLibre canvas fill its (absolutely-positioned) container. */
+.maplibregl-map {
+  font: inherit;
+}
