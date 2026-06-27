@@ -84,7 +84,7 @@ export default function MapView() {
 
             {!tableOpen && (
               <div className="absolute bottom-4 right-4">
-                <MetadataEditor gm={handle.gm} />
+                <MetadataEditor controller={controller} />
               </div>
             )}
 

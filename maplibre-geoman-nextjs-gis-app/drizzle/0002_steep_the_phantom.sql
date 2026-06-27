@@ -1,0 +1,1 @@
+ALTER TABLE "layer" ADD COLUMN "schema" jsonb;

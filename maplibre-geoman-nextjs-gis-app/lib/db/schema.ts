@@ -86,6 +86,10 @@ export const layer = pgTable(
     borderColor: text('border_color').notNull().default('#1d4ed8'),
     visible: boolean('visible').notNull().default(true),
     sortOrder: integer('sort_order').notNull().default(0),
+    // Optional attribute schema (typed fields) for features in this layer —
+    // drives the typed attribute editor + validation. Shape mirrors the
+    // library's FeatureSchema (see lib/types.ts LayerSchema).
+    schema: jsonb('schema').$type<import('@/lib/types').LayerSchema>(),
     createdAt: timestamp('created_at')
       .$defaultFn(() => new Date())
       .notNull(),

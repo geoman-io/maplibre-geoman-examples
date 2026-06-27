@@ -8,7 +8,7 @@ import { useEditorStore } from '@/hooks/useEditorStore';
 import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
 import { featureBounds, inferShape, stringProps, translateGeometry } from '@/lib/io';
-import type { FeatureDTO, LayerDTO } from '@/lib/types';
+import type { FeatureDTO, LayerDTO, LayerSchema, SchemaValidationResult } from '@/lib/types';
 
 const store = () => useEditorStore.getState();
 const featuresOf = (layerId: string) =>
@@ -180,8 +180,37 @@ export class EditorController {
       editable,
       visible: layer.visible,
       style: toStyle(layer),
+      ...(layer.schema ? { schema: layer.schema } : {}),
     });
     this.gm.dataLayers.setData(layer.id, featuresOf(layer.id).map(toGeoJson));
+  }
+
+  /** Set a layer's attribute schema (typed fields) — persisted + applied to the
+   *  engine so dataLayers.validate() can check feature attributes against it. */
+  async setLayerSchema(layer: LayerDTO, schema: LayerSchema | null) {
+    const updated = { ...layer, schema };
+    store().upsertLayer(updated);
+    this.gm.dataLayers.setSchema(layer.id, (schema ?? { fields: [] }) as never);
+    await api.updateLayer(layer.id, { schema });
+  }
+
+  /** Validate a metadata map against the layer's schema via the engine. Coerces
+   *  the string metadata to the field's declared type first. */
+  validateMetadata(layerId: string, metadata: Record<string, string>): SchemaValidationResult {
+    const schema = store().layers.find((l) => l.id === layerId)?.schema;
+    if (!schema) return { valid: true, errors: [] };
+    const props: Record<string, unknown> = {};
+    for (const field of schema.fields) {
+      const raw = metadata[field.name];
+      if (raw == null || raw === '') continue;
+      props[field.name] =
+        field.type === 'number' || field.type === 'integer'
+          ? Number(raw)
+          : field.type === 'boolean'
+            ? raw === 'true'
+            : raw;
+    }
+    return this.gm.dataLayers.validate(layerId, props);
   }
 
   async setActiveLayer(id: string) {

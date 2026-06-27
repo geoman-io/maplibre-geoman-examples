@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import type { EditorController } from '@/lib/geoman/editorController';
 import type { LayerDTO } from '@/lib/types';
+import SchemaEditor from '@/components/overlays/SchemaEditor';
 
 // fill / border palette pairs
 const PALETTE: Array<[string, string]> = [
@@ -53,6 +54,7 @@ export default function LayerPanel({ controller }: { controller: EditorControlle
   const activeLayerId = useEditorStore((s) => s.activeLayerId);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [schemaLayer, setSchemaLayer] = useState<LayerDTO | null>(null);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -156,6 +158,18 @@ export default function LayerPanel({ controller }: { controller: EditorControlle
                 {counts[layer.id] ?? 0}
               </span>
               <button
+                title={`Edit schema${layer.schema?.fields.length ? ` (${layer.schema.fields.length} fields)` : ''}`}
+                aria-label={`Edit schema for ${layer.name}`}
+                onClick={() => setSchemaLayer(layer)}
+                className={`transition-colors hover:text-blue-600 ${
+                  layer.schema?.fields.length ? 'text-blue-500' : 'text-zinc-300'
+                }`}
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 6h16M4 12h16M4 18h10" />
+                </svg>
+              </button>
+              <button
                 title="Delete layer"
                 aria-label={`Delete ${layer.name}`}
                 onClick={() => controller.deleteLayer(layer)}
@@ -187,6 +201,14 @@ export default function LayerPanel({ controller }: { controller: EditorControlle
           Add
         </button>
       </div>
+
+      {schemaLayer && (
+        <SchemaEditor
+          layer={schemaLayer}
+          controller={controller}
+          onClose={() => setSchemaLayer(null)}
+        />
+      )}
     </div>
   );
 }

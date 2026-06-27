@@ -15,6 +15,13 @@
       "when": 1782469707012,
       "tag": "0001_fantastic_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782567806763,
+      "tag": "0002_steep_the_phantom",
+      "breakpoints": true
     }
   ]
 }

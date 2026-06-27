@@ -20,11 +20,27 @@ export async function GET() {
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
+export const layerSchemaShape = z
+  .object({
+    fields: z.array(
+      z.object({
+        name: z.string().min(1).max(60),
+        type: z.enum(['string', 'number', 'integer', 'boolean', 'enum']),
+        required: z.boolean().optional(),
+        min: z.number().optional(),
+        max: z.number().optional(),
+        options: z.array(z.object({ value: z.string(), label: z.string().optional() })).optional(),
+      }),
+    ),
+  })
+  .nullable();
+
 const createSchema = z.object({
   name: z.string().min(1).max(120),
   color: hex.optional(),
   borderColor: hex.optional(),
   sortOrder: z.number().int().optional(),
+  schema: layerSchemaShape.optional(),
 });
 
 export async function POST(req: Request) {
@@ -43,6 +59,7 @@ export async function POST(req: Request) {
       color: parsed.data.color ?? '#3b82f6',
       borderColor: parsed.data.borderColor ?? '#1d4ed8',
       sortOrder: parsed.data.sortOrder ?? 0,
+      schema: parsed.data.schema ?? null,
     })
     .returning();
 
