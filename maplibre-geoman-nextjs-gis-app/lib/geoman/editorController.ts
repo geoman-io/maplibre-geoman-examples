@@ -229,7 +229,7 @@ export class EditorController {
   }
 
   async deleteLayer(layer: LayerDTO) {
-    this.gm.dataLayers.remove(layer.id);
+    await this.gm.dataLayers.remove(layer.id); // async: clears the featureStore
     store().removeLayer(layer.id);
     await api.deleteLayer(layer.id);
     if (store().activeLayerId === null) {
@@ -249,19 +249,22 @@ export class EditorController {
 
   /** Import a GeoJSON FeatureCollection into a layer (persist + render). */
   async importGeoJson(layerId: string, fc: FeatureCollection) {
-    for (const f of fc.features) {
-      if (!f.geometry) continue;
-      const id = crypto.randomUUID();
-      const shape = inferShape(f.geometry);
-      const metadata = stringProps(f.properties);
-      const geojson = {
-        ...f,
-        id,
-        properties: { ...(f.properties ?? {}), id, shape, metadata },
-      } as Feature;
-      const dto = await api.upsertFeature({ id, layerId, shape, geojson, metadata });
-      store().upsertFeature(dto);
-    }
+    const dtos = await Promise.all(
+      fc.features
+        .filter((f) => f.geometry)
+        .map((f) => {
+          const id = crypto.randomUUID();
+          const shape = inferShape(f.geometry);
+          const metadata = stringProps(f.properties);
+          const geojson = {
+            ...f,
+            id,
+            properties: { ...(f.properties ?? {}), id, shape, metadata },
+          } as Feature;
+          return api.upsertFeature({ id, layerId, shape, geojson, metadata });
+        }),
+    );
+    for (const dto of dtos) store().upsertFeature(dto);
     this.gm.dataLayers.setData(layerId, featuresOf(layerId).map(toGeoJson));
   }
 
@@ -294,7 +297,7 @@ export class EditorController {
     map.fitBounds(bounds, { padding: 96, maxZoom, duration: 600 });
   }
 
-  reset() {
-    for (const layer of store().layers) this.gm.dataLayers.remove(layer.id);
+  async reset() {
+    await Promise.all(store().layers.map((layer) => this.gm.dataLayers.remove(layer.id)));
   }
 }

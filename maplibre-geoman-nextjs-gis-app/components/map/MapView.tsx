@@ -31,7 +31,7 @@ export default function MapView() {
     // Signed out: tear down and reset.
     if (!userId) {
       if (initForUser.current) {
-        controller?.reset();
+        void controller?.reset();
         setController(null);
         useEditorStore.setState({
           hydrated: false,
@@ -39,6 +39,7 @@ export default function MapView() {
           features: {},
           activeLayerId: null,
           selectedFeatureId: null,
+          activeTool: null,
         });
         initForUser.current = null;
       }
