@@ -23,6 +23,12 @@ const GM_OPTIONS: NonNullable<ConstructorParameters<typeof Geoman>[1]> = {
     idGenerator: () => crypto.randomUUID(),
   },
   controls: {
+    edit: {
+      // QGIS node-tool behaviour: show vertex markers only for the selected
+      // feature, not every feature in the editing layer. A body click selects
+      // the feature to edit (and lets you drag it).
+      change: { settings: { editSelectedOnly: true, bodyDragEnabled: true } },
+    },
     helper: {
       snapping: { uiEnabled: true, active: true },
     },
