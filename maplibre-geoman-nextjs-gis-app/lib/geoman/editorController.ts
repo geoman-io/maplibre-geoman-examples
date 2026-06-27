@@ -162,16 +162,14 @@ export class EditorController {
     store().setSelectedFeature(id);
   }
 
-  /** Delete the currently selected feature (Del). Deletes through the engine
-   *  (records history for undo) then fires removal so the single `gm:remove`
-   *  handler syncs the store + DB — same path the Delete tool uses. */
+  /** Delete the currently selected feature (Del). `deleteAndNotify` removes it
+   *  through the engine (records history for undo) and fires `gm:remove`, so the
+   *  single handler syncs the store + DB — the same path the Delete tool uses. */
   async deleteSelected() {
     const id = store().selectedFeatureId;
     if (!id) return;
     const fd = findFeature(this.gm, id);
-    if (!fd) return;
-    await this.gm.features.delete(fd);
-    await this.gm.features.fireFeatureRemovedEvent(fd);
+    if (fd) await this.gm.features.deleteAndNotify(fd);
   }
 
   /** Register a layer with Geoman as either the editable layer or a display layer. */
