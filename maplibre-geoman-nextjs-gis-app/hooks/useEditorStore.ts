@@ -11,8 +11,9 @@ type EditorState = {
   features: Record<string, FeatureDTO>;
   activeLayerId: string | null;
   selectedFeatureId: string | null;
-  /** Label of the active map tool (for the status bar). */
-  activeTool: string | null;
+  /** The active map tool — single source of truth for both the toolbar
+   *  highlight (`key`) and the status bar (`title`). Null = no tool. */
+  activeTool: { key: string; title: string } | null;
   /** Undo/redo availability, mirrored from Geoman's `gm:history` event. */
   canUndo: boolean;
   canRedo: boolean;
@@ -20,7 +21,7 @@ type EditorState = {
   clipboard: unknown | null;
 
   setHydrated: (v: boolean) => void;
-  setActiveTool: (tool: string | null) => void;
+  setActiveTool: (tool: { key: string; title: string } | null) => void;
   setHistory: (canUndo: boolean, canRedo: boolean) => void;
   setClipboard: (geojson: unknown | null) => void;
   setLayers: (layers: LayerDTO[]) => void;

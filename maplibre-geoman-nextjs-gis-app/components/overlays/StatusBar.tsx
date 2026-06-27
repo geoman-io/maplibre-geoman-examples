@@ -54,7 +54,7 @@ export default function StatusBar({ gm }: { gm: Geoman }) {
       <span className={cell}>{featureCount} features</span>
       {selectedId && <span className={`${cell} text-blue-600`}>1 selected</span>}
       {activeTool && (
-        <span className={`${cell} font-semibold text-blue-600`}>{activeTool}</span>
+        <span className={`${cell} font-semibold text-blue-600`}>{activeTool.title}</span>
       )}
       <span className={cell}>EPSG:4326</span>
     </div>

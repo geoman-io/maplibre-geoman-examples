@@ -7,7 +7,7 @@ import type { FeatureCollection } from 'geojson';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
-import { featureBounds, inferShape, stringProps } from '@/lib/io';
+import { featureBounds, inferShape, stringProps, translateGeometry } from '@/lib/io';
 import type { FeatureDTO, LayerDTO } from '@/lib/types';
 
 const store = () => useEditorStore.getState();
@@ -143,32 +143,35 @@ export class EditorController {
   async paste() {
     const clip = store().clipboard as Feature | null;
     const layerId = store().activeLayerId;
-    if (!clip || !layerId) return;
-    const offset = (geom: Feature['geometry']): Feature['geometry'] => {
-      const shift = ([x, y]: number[]): number[] => [x + 0.05, y - 0.05];
-      const walk = (c: unknown): unknown =>
-        Array.isArray(c) && typeof c[0] === 'number' ? shift(c as number[]) : (c as unknown[]).map(walk);
-      return { ...geom, coordinates: walk((geom as { coordinates: unknown }).coordinates) } as Feature['geometry'];
-    };
+    if (!clip?.geometry || !layerId) return;
     const id = crypto.randomUUID();
-    const shape = inferShape(clip.geometry);
-    const geojson: Feature = { type: 'Feature', properties: {}, geometry: offset(clip.geometry) };
-    const dto = await api.upsertFeature({ id, layerId, shape, geojson, metadata: {} });
+    const geojson: Feature = {
+      type: 'Feature',
+      properties: {},
+      geometry: translateGeometry(clip.geometry, 0.05, -0.05),
+    };
+    const dto = await api.upsertFeature({
+      id,
+      layerId,
+      shape: inferShape(clip.geometry),
+      geojson,
+      metadata: {},
+    });
     store().upsertFeature(dto);
     this.gm.dataLayers.setData(layerId, featuresOf(layerId).map(toGeoJson));
     store().setSelectedFeature(id);
   }
 
-  /** Delete the currently selected feature (Del / toolbar). */
+  /** Delete the currently selected feature (Del). Deletes through the engine
+   *  (records history for undo) then fires removal so the single `gm:remove`
+   *  handler syncs the store + DB — same path the Delete tool uses. */
   async deleteSelected() {
     const id = store().selectedFeatureId;
     if (!id) return;
     const fd = findFeature(this.gm, id);
-    if (fd) await this.gm.features.delete(fd);
-    if (store().features[id]) {
-      store().removeFeature(id);
-      await api.deleteFeature(id).catch(() => {});
-    }
+    if (!fd) return;
+    await this.gm.features.delete(fd);
+    await this.gm.features.fireFeatureRemovedEvent(fd);
   }
 
   /** Register a layer with Geoman as either the editable layer or a display layer. */

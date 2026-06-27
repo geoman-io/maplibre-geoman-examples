@@ -34,6 +34,18 @@ function eachPosition(geometry: Geometry, fn: (p: Position) => void) {
   }
 }
 
+/** A copy of a geometry with every coordinate shifted by (dx, dy) degrees. */
+export function translateGeometry<G extends Geometry>(geometry: G, dx: number, dy: number): G {
+  const shift = (coords: unknown): unknown =>
+    typeof (coords as number[])[0] === 'number'
+      ? [(coords as Position)[0] + dx, (coords as Position)[1] + dy, ...(coords as number[]).slice(2)]
+      : (coords as unknown[]).map(shift);
+  if (geometry.type === 'GeometryCollection') {
+    return { ...geometry, geometries: geometry.geometries.map((g) => translateGeometry(g, dx, dy)) };
+  }
+  return { ...geometry, coordinates: shift((geometry as { coordinates: unknown }).coordinates) } as G;
+}
+
 /** Bounding box of a GeoJSON feature, or null if it has no coordinates. */
 export function featureBounds(feature: Feature): Bounds | null {
   let minX = Infinity;

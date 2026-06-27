@@ -115,7 +115,6 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
 ];
 
 export default function Toolbar({ gm, controller }: { gm: Geoman; controller: EditorController }) {
-  const [active, setActive] = useState<string | null>(null);
   const [helpers, setHelpers] = useState<{ measurements: boolean; snapping: boolean }>({
     measurements: false,
     snapping: true,
@@ -126,21 +125,21 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
   const hasActiveLayer = useEditorStore((s) => s.activeLayerId !== null);
   const canUndo = useEditorStore((s) => s.canUndo);
   const canRedo = useEditorStore((s) => s.canRedo);
+  // Single source of truth — so Esc (which clears it) also un-highlights here.
+  const activeTool = useEditorStore((s) => s.activeTool);
 
   const findTitle = (key: string) =>
-    GROUPS.flatMap((g) => g.tools).find((t) => t.id === key)?.title ?? null;
+    GROUPS.flatMap((g) => g.tools).find((t) => t.id === key)?.title ?? key;
 
   const select = async (key: string, run: () => Promise<void> | void) => {
     if (!hasActiveLayer) return;
     await gm.disableAllModes();
-    if (active === key) {
-      setActive(null);
+    if (activeTool?.key === key) {
       useEditorStore.getState().setActiveTool(null);
       return;
     }
     await run();
-    setActive(key);
-    useEditorStore.getState().setActiveTool(findTitle(key));
+    useEditorStore.getState().setActiveTool({ key, title: findTitle(key) });
   };
 
   // Fluid selection: rest in the Select tool once a layer exists, so clicking a
@@ -151,8 +150,7 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
     defaulted.current = true;
     void (async () => {
       await gm.enableMode('edit', 'select' as never);
-      setActive('select');
-      useEditorStore.getState().setActiveTool('Select');
+      useEditorStore.getState().setActiveTool({ key: 'select', title: 'Select' });
     })();
   }, [hasActiveLayer, gm]);
 
@@ -197,7 +195,7 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
               hasActiveLayer ? t.title : `${t.title} — add a layer first`,
               () => select(t.id, () => t.run(gm)),
               {
-                on: active === t.id,
+                on: activeTool?.key === t.id,
                 disabled: !hasActiveLayer || (t.needsSelection && !hasSelection),
               },
             ),
