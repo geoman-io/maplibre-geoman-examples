@@ -15,7 +15,9 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "relink": "pnpm --dir ../../maplibre-geoman-pro --filter @geoman-io/maplibre-geoman-pro build && rm -rf node_modules pnpm-lock.yaml .next && pnpm install",
+    "dev:fresh": "pnpm relink && pnpm dev"
   },
   "dependencies": {
     "@geoman-io/maplibre-geoman-pro": "file:../../maplibre-geoman-pro/packages/maplibre-pro",

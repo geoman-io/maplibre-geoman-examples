@@ -119,11 +119,15 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
     snapping: true,
   });
   const hasSelection = useEditorStore((s) => s.selectedFeatureId !== null);
+  // Every edit/draw tool needs a layer to write into — without one a drawn
+  // shape would land in no layer and never persist.
+  const hasActiveLayer = useEditorStore((s) => s.activeLayerId !== null);
 
   const findTitle = (key: string) =>
     GROUPS.flatMap((g) => g.tools).find((t) => t.id === key)?.title ?? null;
 
   const select = async (key: string, run: () => Promise<void> | void) => {
+    if (!hasActiveLayer) return;
     await gm.disableAllModes();
     if (active === key) {
       setActive(null);
@@ -170,9 +174,12 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
             tbtn(
               t.id,
               t.icon,
-              t.title,
+              hasActiveLayer ? t.title : `${t.title} — add a layer first`,
               () => select(t.id, () => t.run(gm)),
-              { on: active === t.id, disabled: t.needsSelection && !hasSelection },
+              {
+                on: active === t.id,
+                disabled: !hasActiveLayer || (t.needsSelection && !hasSelection),
+              },
             ),
           )}
         </div>
