@@ -63,6 +63,8 @@ export default function GisMap({ onReady }: GisMapProps) {
     });
     mapRef.current = map;
 
+    map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 140 }), 'bottom-right');
+
     const gm = new Geoman(map, GM_OPTIONS);
     gmRef.current = gm;
 

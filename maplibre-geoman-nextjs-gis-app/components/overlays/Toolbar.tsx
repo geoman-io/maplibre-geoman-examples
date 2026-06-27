@@ -92,14 +92,14 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
   {
     name: 'Geometry',
     tools: [
-      edit('split', 'split', 'Split'),
-      edit('union', 'union', 'Union'),
-      edit('difference', 'difference', 'Difference'),
+      edit('split', 'split', 'Split — draw a line across a shape'),
+      edit('union', 'union', 'Union — click two overlapping shapes'),
+      edit('difference', 'difference', 'Difference — click two overlapping shapes'),
       edit('add_part', 'add_part', 'Add part', true),
-      edit('add_hole', 'add_hole', 'Add hole', true),
-      edit('remove_ring', 'remove_ring', 'Remove ring', true),
+      edit('add_hole', 'add_hole', 'Add hole — draw a ring inside', true),
+      edit('remove_ring', 'remove_ring', 'Remove ring — click a hole', true),
       edit('merge_parts', 'merge_parts', 'Merge parts', true),
-      edit('line_simplification', 'simplify', 'Simplify'),
+      edit('line_simplification', 'simplify', 'Simplify — click two vertices on a line'),
     ],
   },
   {
@@ -139,7 +139,8 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
       return;
     }
     await run();
-    useEditorStore.getState().setActiveTool({ key, title: findTitle(key) });
+    // Status bar shows the short name; the full descriptive title stays the tooltip.
+    useEditorStore.getState().setActiveTool({ key, title: findTitle(key).split(' — ')[0] });
   };
 
   // Fluid selection: rest in the Select tool once a layer exists, so clicking a
