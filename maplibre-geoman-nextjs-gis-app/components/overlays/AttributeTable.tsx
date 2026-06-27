@@ -28,11 +28,16 @@ export default function AttributeTable({
     [features, activeLayerId],
   );
 
+  // Schema fields lead (in declared order, so empty cells still show a column),
+  // then any extra ad-hoc metadata keys.
   const columns = useMemo(() => {
-    const keys = new Set<string>();
+    const schemaNames = (layer?.schema?.fields ?? []).map((f) => f.name);
+    const keys = new Set<string>(schemaNames);
     for (const f of rows) for (const k of Object.keys(f.metadata)) keys.add(k);
-    return [...keys].sort();
-  }, [rows]);
+    const extra = [...keys].filter((k) => !schemaNames.includes(k)).sort();
+    return [...schemaNames, ...extra];
+  }, [rows, layer]);
+  const fieldFor = (col: string) => layer?.schema?.fields.find((f) => f.name === col);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -144,6 +149,7 @@ export default function AttributeTable({
               {columns.map((c) => (
                 <th key={c} className="border-b border-zinc-200 px-3 py-1.5 font-medium">
                   {c}
+                  {fieldFor(c)?.required && <span className="text-red-500"> *</span>}
                 </th>
               ))}
               <th className="border-b border-zinc-200 px-2 py-1.5">
@@ -182,15 +188,36 @@ export default function AttributeTable({
                   {f.id.slice(0, 8)}
                 </td>
                 <td className="px-3 py-1 text-zinc-600">{f.shape ?? '—'}</td>
-                {columns.map((c) => (
-                  <td key={c} className="px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      defaultValue={f.metadata[c] ?? ''}
-                      onBlur={(e) => commit(f.id, c, e.target.value)}
-                      className="w-full rounded px-2 py-0.5 text-sm outline-none hover:bg-zinc-100 focus:bg-white focus:ring-1 focus:ring-blue-300"
-                    />
-                  </td>
-                ))}
+                {columns.map((c) => {
+                  const field = fieldFor(c);
+                  const cls =
+                    'w-full rounded px-2 py-0.5 text-sm outline-none hover:bg-zinc-100 focus:bg-white focus:ring-1 focus:ring-blue-300';
+                  return (
+                    <td key={c} className="px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
+                      {field?.type === 'enum' ? (
+                        <select
+                          defaultValue={f.metadata[c] ?? ''}
+                          onChange={(e) => commit(f.id, c, e.target.value)}
+                          className={cls}
+                        >
+                          <option value="">—</option>
+                          {(field.options ?? []).map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label ?? o.value}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={field?.type === 'number' || field?.type === 'integer' ? 'number' : 'text'}
+                          defaultValue={f.metadata[c] ?? ''}
+                          onBlur={(e) => commit(f.id, c, e.target.value)}
+                          className={cls}
+                        />
+                      )}
+                    </td>
+                  );
+                })}
                 <td />
               </tr>
             ))}
