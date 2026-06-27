@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import type { Geoman } from '@geoman-io/maplibre-geoman-pro';
+import type { Feature } from 'geojson';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import * as api from '@/lib/api-client';
 import { findFeature } from '@/lib/geoman/featureSync';
+import { formatArea, formatLength, measureFeature } from '@/lib/measure';
 import type { FeatureDTO, LayerDTO } from '@/lib/types';
 
 type Row = { key: string; value: string };
@@ -40,6 +42,7 @@ function Editor({
     Object.entries(feature.metadata).map(([key, value]) => ({ key, value })),
   );
   const [saving, setSaving] = useState(false);
+  const m = measureFeature(feature.geojson as Feature);
 
   const setRow = (i: number, patch: Partial<Row>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -85,6 +88,25 @@ function Editor({
           ✕
         </button>
       </div>
+
+      {m && (m.area != null || m.length != null) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-zinc-200 bg-zinc-50/60 px-3 py-2 text-[11px] text-zinc-600">
+          {m.area != null && (
+            <span>
+              <span className="text-zinc-400">Area</span> {formatArea(m.area)}
+            </span>
+          )}
+          {m.length != null && (
+            <span>
+              <span className="text-zinc-400">{m.area != null ? 'Perimeter' : 'Length'}</span>{' '}
+              {formatLength(m.length)}
+            </span>
+          )}
+          <span>
+            <span className="text-zinc-400">Vertices</span> {m.vertices}
+          </span>
+        </div>
+      )}
 
       <div className="max-h-[40vh] space-y-2 overflow-y-auto p-3">
         {rows.length === 0 && (
