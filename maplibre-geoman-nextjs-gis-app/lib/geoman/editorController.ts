@@ -63,6 +63,9 @@ export class EditorController {
     for (const layer of layers) {
       this.addGeomanLayer(layer, layer.id === active?.id);
     }
+    // Match the panel order (top of the list = rendered on top) — the engine
+    // stacks layers in add-order, so restack to put layers[0] on top.
+    this.restackLayers(layers.map((l) => l.id));
     if (active) await this.gm.dataLayers.setActive(active.id);
     store().setActiveLayer(active?.id ?? null);
 
@@ -240,6 +243,49 @@ export class EditorController {
     this.addGeomanLayer(layer, false); // added as display, then promoted
     await this.setActiveLayer(layer.id);
     return layer;
+  }
+
+  /**
+   * Reorder layers from the layer panel. `orderedIds[0]` is the top of the
+   * stack (rendered above the rest). Restacks the map's render layers, updates
+   * the store order + each layer's `sortOrder`, and persists.
+   */
+  async reorderLayers(orderedIds: string[]) {
+    const byId = new Map(store().layers.map((l) => [l.id, l]));
+    const reordered = orderedIds
+      .map((id, i) => {
+        const l = byId.get(id);
+        return l ? { ...l, sortOrder: i } : null;
+      })
+      .filter((l): l is LayerDTO => l !== null);
+
+    store().setLayers(reordered);
+    this.restackLayers(orderedIds);
+    await Promise.all(reordered.map((l) => api.updateLayer(l.id, { sortOrder: l.sortOrder })));
+  }
+
+  /**
+   * Re-stack the data-layer render layers (`gm_dl_<id>-fill/line/circle`) so the
+   * given order renders top-first, keeping the whole data-layer band in place
+   * (below whatever currently sits above it — Geoman's edit overlays). Each
+   * layer is moved before that ceiling in reverse order, so `orderedTopFirst[0]`
+   * ends up on top.
+   */
+  private restackLayers(orderedTopFirst: string[]) {
+    const map = this.map();
+    const style = map.getStyle().layers ?? [];
+    let lastDataIdx = -1;
+    style.forEach((l, i) => {
+      if ((l as { source?: string }).source?.startsWith(SOURCE_PREFIX)) lastDataIdx = i;
+    });
+    const ceiling = lastDataIdx >= 0 ? style[lastDataIdx + 1]?.id : undefined;
+
+    for (const id of [...orderedTopFirst].reverse()) {
+      for (const role of ['fill', 'line', 'circle'] as const) {
+        const renderId = `${SOURCE_PREFIX}${id}-${role}`;
+        if (map.getLayer(renderId)) map.moveLayer(renderId, ceiling);
+      }
+    }
   }
 
   async toggleVisibility(layer: LayerDTO) {

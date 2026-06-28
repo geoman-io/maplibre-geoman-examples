@@ -61,6 +61,22 @@ export default function LayerPanel({
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [schemaLayer, setSchemaLayer] = useState<LayerDTO | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  // Drop the dragged layer at the hovered layer's position; orderedIds[0] is
+  // the top of the stack (rendered above the rest).
+  const onDropLayer = async (targetId: string) => {
+    const ids = layers.map((l) => l.id);
+    const from = ids.indexOf(dragId ?? '');
+    const to = ids.indexOf(targetId);
+    setDragId(null);
+    setOverId(null);
+    if (from === -1 || to === -1 || from === to) return;
+    ids.splice(from, 1);
+    ids.splice(to, 0, dragId!);
+    await controller.reorderLayers(ids);
+  };
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -115,10 +131,40 @@ export default function LayerPanel({
           return (
             <div
               key={layer.id}
-              className={`group flex items-center gap-2 px-3.5 py-2 ${
+              onDragOver={(e) => {
+                if (!dragId) return;
+                e.preventDefault();
+                if (overId !== layer.id) setOverId(layer.id);
+              }}
+              onDrop={() => onDropLayer(layer.id)}
+              className={`group flex items-center gap-2 border-t-2 px-3.5 py-2 ${
                 isActive ? 'bg-blue-50/70' : 'hover:bg-zinc-50'
+              } ${dragId === layer.id ? 'opacity-40' : ''} ${
+                overId === layer.id && dragId && dragId !== layer.id
+                  ? 'border-blue-500'
+                  : 'border-transparent'
               }`}
             >
+              <span
+                draggable
+                onDragStart={() => setDragId(layer.id)}
+                onDragEnd={() => {
+                  setDragId(null);
+                  setOverId(null);
+                }}
+                title="Drag to reorder"
+                aria-label={`Reorder ${layer.name}`}
+                className="shrink-0 cursor-grab text-zinc-300 transition-colors hover:text-zinc-500 active:cursor-grabbing"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                  <circle cx="9" cy="6" r="1.4" />
+                  <circle cx="15" cy="6" r="1.4" />
+                  <circle cx="9" cy="12" r="1.4" />
+                  <circle cx="15" cy="12" r="1.4" />
+                  <circle cx="9" cy="18" r="1.4" />
+                  <circle cx="15" cy="18" r="1.4" />
+                </svg>
+              </span>
               <button
                 title={layer.visible ? 'Hide layer' : 'Show layer'}
                 aria-label={layer.visible ? 'Hide layer' : 'Show layer'}
