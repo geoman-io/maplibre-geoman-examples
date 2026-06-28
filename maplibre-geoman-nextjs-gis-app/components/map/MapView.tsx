@@ -9,7 +9,9 @@ import StatusBar from '@/components/overlays/StatusBar';
 import LayerPanel from '@/components/overlays/LayerPanel';
 import MetadataEditor from '@/components/overlays/MetadataEditor';
 import AttributeTable from '@/components/overlays/AttributeTable';
+import SettingsModal from '@/components/overlays/SettingsModal';
 import { useEditorStore } from '@/hooks/useEditorStore';
+import { useConfig } from '@/hooks/useConfig';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSession } from '@/lib/auth-client';
 import { EditorController } from '@/lib/geoman/editorController';
@@ -19,7 +21,17 @@ export default function MapView() {
   const [handle, setHandle] = useState<GisMapHandle | null>(null);
   const [controller, setController] = useState<EditorController | null>(null);
   useKeyboardShortcuts(handle?.gm ?? null, controller);
+
+  // Apply the persisted behaviour config to the engine + map handlers, and
+  // re-apply whenever the settings modal changes it.
+  useEffect(() => {
+    if (!controller) return;
+    const apply = () => controller.applyConfig(useConfig.getState());
+    apply();
+    return useConfig.subscribe(apply);
+  }, [controller]);
   const [tableOpen, setTableOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const hydrated = useEditorStore((s) => s.hydrated);
   const initForUser = useRef<string | null>(null);
 
@@ -68,7 +80,9 @@ export default function MapView() {
         {userId && (
           <div className="absolute right-4 top-4 flex flex-col items-end gap-3">
             <UserMenu />
-            {ready && <LayerPanel controller={controller} />}
+            {ready && (
+              <LayerPanel controller={controller} onSettings={() => setSettingsOpen(true)} />
+            )}
           </div>
         )}
 
@@ -104,6 +118,8 @@ export default function MapView() {
             )}
           </>
         )}
+
+        {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
 
         {userId && !hydrated && (
           <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-white/90 px-4 py-1.5 text-xs font-medium text-zinc-600 shadow ring-1 ring-black/5">

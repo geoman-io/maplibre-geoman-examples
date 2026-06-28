@@ -5,6 +5,7 @@ import type maplibregl from 'maplibre-gl';
 import type { Feature } from 'geojson';
 import type { FeatureCollection } from 'geojson';
 import { useEditorStore } from '@/hooks/useEditorStore';
+import { DEFAULT_CONFIG, type Config } from '@/hooks/useConfig';
 import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
 import { featureBounds, inferShape, stringProps, translateGeometry } from '@/lib/io';
@@ -320,11 +321,92 @@ export class EditorController {
 
   private fit(bounds: [[number, number], [number, number]] | null, maxZoom: number) {
     if (!bounds) return;
-    const map = this.gm.mapAdapter.getMapInstance() as unknown as maplibregl.Map;
+    const map = this.map();
     map.fitBounds(bounds, { padding: 96, maxZoom, duration: 600 });
   }
 
+  // --- Behaviour config (settings modal) -----------------------------------
+
+  private config: Config = DEFAULT_CONFIG;
+  private hoverHandler: ((e: maplibregl.MapMouseEvent) => void) | null = null;
+  private clickHandler: ((e: maplibregl.MapMouseEvent) => void) | null = null;
+
+  private map() {
+    return this.gm.mapAdapter.getMapInstance() as unknown as maplibregl.Map;
+  }
+
+  /** Render-layer ids of every data layer (for queryRenderedFeatures). */
+  private dataLayerRenderIds(): string[] {
+    return (this.map().getStyle().layers ?? [])
+      .filter((l) => (l as { source?: string }).source?.startsWith(SOURCE_PREFIX))
+      .map((l) => l.id);
+  }
+
+  /** Apply the persisted behaviour config — runtime edit options + the hover /
+   *  cross-layer-select map handlers. Safe to call repeatedly. */
+  applyConfig(config: Config) {
+    this.config = config;
+    const settings = this.gm.options.controls?.edit?.change?.settings as
+      | { editSelectedOnly?: boolean; bodyDragEnabled?: boolean }
+      | undefined;
+    if (settings) {
+      settings.editSelectedOnly = config.editSelectedOnly;
+      settings.bodyDragEnabled = config.bodyDrag;
+    }
+    this.setHoverCursor(config.hoverCursor);
+    this.setCrossLayerSelect(config.crossLayerSelect);
+  }
+
+  private setHoverCursor(on: boolean) {
+    const map = this.map();
+    if (this.hoverHandler) {
+      map.off('mousemove', this.hoverHandler);
+      this.hoverHandler = null;
+      map.getCanvas().style.cursor = '';
+    }
+    if (!on) return;
+    this.hoverHandler = (e) => {
+      const ids = this.dataLayerRenderIds();
+      const hits = ids.length ? map.queryRenderedFeatures(e.point, { layers: ids }) : [];
+      const hit = hits.find(
+        (h) =>
+          this.config.crossLayerSelect ||
+          layerIdFromSource(String(h.source)) === store().activeLayerId,
+      );
+      map.getCanvas().style.cursor = hit ? 'move' : '';
+    };
+    map.on('mousemove', this.hoverHandler);
+  }
+
+  private setCrossLayerSelect(on: boolean) {
+    const map = this.map();
+    if (this.clickHandler) {
+      map.off('click', this.clickHandler);
+      this.clickHandler = null;
+    }
+    if (!on) return;
+    this.clickHandler = (e) => {
+      const ids = this.dataLayerRenderIds();
+      if (!ids.length) return;
+      const hit = map.queryRenderedFeatures(e.point, { layers: ids }).find((h) => {
+        const lid = layerIdFromSource(String(h.source));
+        return lid && lid !== store().activeLayerId;
+      });
+      if (!hit) return;
+      const layerId = layerIdFromSource(String(hit.source));
+      const featureId = String(hit.properties?.id ?? '');
+      if (!layerId || !featureId) return;
+      void this.setActiveLayer(layerId).then(() => {
+        this.gm.features.setSelection([featureId]);
+        store().setSelectedFeature(featureId);
+      });
+    };
+    map.on('click', this.clickHandler);
+  }
+
   async reset() {
+    this.setHoverCursor(false);
+    this.setCrossLayerSelect(false);
     await Promise.all(store().layers.map((layer) => this.gm.dataLayers.remove(layer.id)));
   }
 }

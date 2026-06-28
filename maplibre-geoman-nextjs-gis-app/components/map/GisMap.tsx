@@ -6,34 +6,34 @@ import { Geoman } from '@geoman-io/maplibre-geoman-pro';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@geoman-io/maplibre-geoman-pro/dist/maplibre-geoman.css';
 import mapStyle from '@/lib/maplibre-style';
+import { useConfig } from '@/hooks/useConfig';
 
 export type GisMapHandle = {
   map: maplibregl.Map;
   gm: Geoman;
 };
 
-// Typed against the real constructor signature so option literals are checked.
-const GM_OPTIONS: NonNullable<ConstructorParameters<typeof Geoman>[1]> = {
-  settings: {
-    // Fully custom UI: Geoman renders no control bar of its own. Every control
-    // in this app is a React overlay that drives Geoman programmatically.
-    useControlsUi: false,
-    // Globally-unique feature ids so they never collide across layers/reloads
-    // (features are keyed by id in the DB with a (userId, id) primary key).
-    idGenerator: () => crypto.randomUUID(),
-  },
-  controls: {
-    edit: {
-      // QGIS node-tool behaviour: show vertex markers only for the selected
-      // feature, not every feature in the editing layer. A body click selects
-      // the feature to edit (and lets you drag it).
-      change: { settings: { editSelectedOnly: true, bodyDragEnabled: true } },
+// Built from the persisted config so edit behaviour matches the settings modal
+// from the first frame (it's also re-applied at runtime via controller.applyConfig).
+function buildGmOptions(): NonNullable<ConstructorParameters<typeof Geoman>[1]> {
+  const c = useConfig.getState();
+  return {
+    settings: {
+      // Fully custom UI: Geoman renders no control bar of its own. Every control
+      // in this app is a React overlay that drives Geoman programmatically.
+      useControlsUi: false,
+      // Globally-unique feature ids so they never collide across layers/reloads
+      // (features are keyed by id in the DB with a (userId, id) primary key).
+      idGenerator: () => crypto.randomUUID(),
     },
-    helper: {
-      snapping: { uiEnabled: true, active: true },
+    controls: {
+      // QGIS node tool: vertex markers only for the selected feature; a body
+      // click selects + drags. Both come from the persisted config.
+      edit: { change: { settings: { editSelectedOnly: c.editSelectedOnly, bodyDragEnabled: c.bodyDrag } } },
+      helper: { snapping: { uiEnabled: true, active: true } },
     },
-  },
-};
+  };
+}
 
 interface GisMapProps {
   /** Called once, after `gm:loaded`, with the live map + Geoman instances. */
@@ -65,7 +65,7 @@ export default function GisMap({ onReady }: GisMapProps) {
 
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 140 }), 'bottom-right');
 
-    const gm = new Geoman(map, GM_OPTIONS);
+    const gm = new Geoman(map, buildGmOptions());
     gmRef.current = gm;
 
     map.on('gm:loaded', () => {

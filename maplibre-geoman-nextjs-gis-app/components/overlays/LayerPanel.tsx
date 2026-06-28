@@ -48,7 +48,13 @@ function Swatch({
   );
 }
 
-export default function LayerPanel({ controller }: { controller: EditorController }) {
+export default function LayerPanel({
+  controller,
+  onSettings,
+}: {
+  controller: EditorController;
+  onSettings?: () => void;
+}) {
   const layers = useEditorStore((s) => s.layers);
   const features = useEditorStore((s) => s.features);
   const activeLayerId = useEditorStore((s) => s.activeLayerId);
@@ -78,9 +84,24 @@ export default function LayerPanel({ controller }: { controller: EditorControlle
     <div className="pointer-events-auto flex w-80 flex-col rounded-xl bg-white/95 shadow-lg ring-1 ring-black/5 backdrop-blur">
       <div className="flex items-center justify-between border-b border-zinc-200 px-3.5 py-2.5">
         <h2 className="text-sm font-semibold text-zinc-800">Layers</h2>
-        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
-          {layers.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
+            {layers.length}
+          </span>
+          {onSettings && (
+            <button
+              onClick={onSettings}
+              aria-label="Editor settings"
+              title="Editor settings"
+              className="text-zinc-400 transition-colors hover:text-zinc-700"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="max-h-[44vh] overflow-y-auto py-1">
