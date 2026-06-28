@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "build": {
+    "env": {
+      "ENABLE_EXPERIMENTAL_COREPACK": "1"
+    }
+  },
+  "installCommand": "pnpm config set \"//npm.geoman.io/:_authToken\" \"${GEOMAN_NPM_TOKEN:-$NPM_TOKEN_GEOMAN}\" && pnpm install --frozen-lockfile"
+}
