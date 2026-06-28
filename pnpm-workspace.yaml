@@ -1,6 +1,9 @@
 packages:
   - 'maplibre-geoman-*'
   - 'mapbox-geoman-*'
+  # Standalone Pro GIS demo: has its own lockfile + .npmrc (private @geoman-io
+  # registry), so it is intentionally excluded from this workspace.
+  - '!maplibre-geoman-nextjs-gis-app'
 
 allowBuilds:
   '@parcel/watcher': true
