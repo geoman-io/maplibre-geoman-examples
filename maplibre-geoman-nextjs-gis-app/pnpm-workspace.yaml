@@ -6,3 +6,9 @@ allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: true
+
+# Vercel enforces a pnpm supply-chain `minimumReleaseAge` (~24h) — a freshly
+# published package fails the install. The pinned Pro build is our own private
+# package, so allow it through immediately (bump the version when re-pinning).
+minimumReleaseAgeExclude:
+  - '@geoman-io/maplibre-geoman-pro@0.9.2-alpha.0'
