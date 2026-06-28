@@ -5,5 +5,5 @@
       "ENABLE_EXPERIMENTAL_COREPACK": "1"
     }
   },
-  "installCommand": "pnpm config set \"//npm.geoman.io/:_authToken\" \"${GEOMAN_NPM_TOKEN:-$NPM_TOKEN_GEOMAN}\" && pnpm install --frozen-lockfile"
+  "installCommand": "pnpm config set \"//npm.geoman.io/:_authToken\" \"$NPM_TOKEN_GEOMAN\" && pnpm install --frozen-lockfile"
 }
