@@ -272,20 +272,9 @@ export class EditorController {
    * ends up on top.
    */
   private restackLayers(orderedTopFirst: string[]) {
-    const map = this.map();
-    const style = map.getStyle().layers ?? [];
-    let lastDataIdx = -1;
-    style.forEach((l, i) => {
-      if ((l as { source?: string }).source?.startsWith(SOURCE_PREFIX)) lastDataIdx = i;
-    });
-    const ceiling = lastDataIdx >= 0 ? style[lastDataIdx + 1]?.id : undefined;
-
-    for (const id of [...orderedTopFirst].reverse()) {
-      for (const role of ['fill', 'line', 'circle'] as const) {
-        const renderId = `${SOURCE_PREFIX}${id}-${role}`;
-        if (map.getLayer(renderId)) map.moveLayer(renderId, ceiling);
-      }
-    }
+    // The engine owns the data-layer band + render-group semantics
+    // (maplibre-geoman-pro >= 0.9.2-alpha.2). orderedTopFirst[0] renders on top.
+    this.gm.dataLayers.reorder(orderedTopFirst);
   }
 
   async toggleVisibility(layer: LayerDTO) {
