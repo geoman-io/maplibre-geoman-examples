@@ -1,9 +1,12 @@
 packages:
   - 'maplibre-geoman-*'
   - 'mapbox-geoman-*'
-  # Standalone Pro GIS demo: has its own lockfile + .npmrc (private @geoman-io
-  # registry), so it is intentionally excluded from this workspace.
+  # Standalone Pro demos: each has its own lockfile + .npmrc (private @geoman-io
+  # registry), so they are intentionally excluded from this workspace.
   - '!maplibre-geoman-nextjs-gis-app'
+  - '!maplibre-geoman-nextjs-realestate-app'
+  - '!maplibre-geoman-nextjs-solar-app'
+  - '!maplibre-geoman-react-editors'
 
 allowBuilds:
   '@parcel/watcher': true
@@ -94,8 +97,9 @@ catalog:
   normalize.css: ^8.0.1
 
 minimumReleaseAgeExclude:
-  - '@geoman-io/mapbox-geoman-free@0.8.3'
-  - '@geoman-io/maplibre-geoman-free@0.8.3'
+  # Every @geoman-io/* package is our own private build — exempt the whole scope
+  # so fast-moving Pro/free releases install immediately with no per-version pin.
+  - '@geoman-io/*'
   - '@typescript-eslint/eslint-plugin@8.61.1'
   - '@typescript-eslint/parser@8.61.1'
   - '@typescript-eslint/project-service@8.61.1'
