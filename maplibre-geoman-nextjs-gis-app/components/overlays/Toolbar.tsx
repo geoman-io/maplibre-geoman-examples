@@ -31,6 +31,7 @@ const I: Record<string, ReactNode> = {
   add_hole: S(<><path d="M4 4h16v16H4Z" /><circle cx="12" cy="12" r="3.5" strokeDasharray="2 2" /></>),
   remove_ring: S(<><path d="M4 4h16v16H4Z" /><path d="m9 9 6 6M15 9l-6 6" /></>),
   merge_parts: S(<><rect x="3" y="8" width="8" height="8" rx="1" /><rect x="13" y="8" width="8" height="8" rx="1" /><path d="M11 12h2" /></>),
+  explode: S(<><rect x="9" y="9" width="6" height="6" rx="1" /><path d="M11 3 4 10M13 3l7 7M11 21l-7-7M13 21l7-7" /></>),
   simplify: S(<path d="M3 17c4 0 4-8 8-8s2 5 5 5 3-4 5-4" />),
   copy: S(<><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>),
   cut: S(<><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12" /></>),
@@ -51,7 +52,7 @@ type Tool = {
   title: string;
   /** Longer tooltip describing a non-obvious multi-step interaction. */
   hint?: string;
-  run: (gm: Geoman) => Promise<void> | void;
+  run: (gm: Geoman, controller: EditorController) => Promise<void> | void;
   needsSelection?: boolean;
 };
 
@@ -109,6 +110,14 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
       edit('add_hole', 'add_hole', 'Add hole', true, 'Add hole — draw a ring inside a polygon'),
       edit('remove_ring', 'remove_ring', 'Remove ring', true, 'Remove ring — click a hole'),
       edit('merge_parts', 'merge_parts', 'Merge parts', true),
+      {
+        id: 'explode',
+        icon: 'explode',
+        title: 'Explode',
+        needsSelection: true,
+        hint: 'Explode — split the selected multipolygon into separate parts',
+        run: (_gm, controller) => controller.explodeSelected(),
+      },
       edit('line_simplification', 'simplify', 'Simplify', false, 'Simplify — click two vertices on a line'),
     ],
   },
@@ -194,7 +203,7 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
               t.id,
               t.icon,
               hasActiveLayer ? t.title : `${t.title} — add a layer first`,
-              () => select(t.id, () => t.run(gm)),
+              () => select(t.id, () => t.run(gm, controller)),
               {
                 on: activeTool?.key === t.id,
                 disabled: !hasActiveLayer || (t.needsSelection && !hasSelection),

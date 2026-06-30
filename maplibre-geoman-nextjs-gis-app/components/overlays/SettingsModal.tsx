@@ -1,9 +1,16 @@
 'use client';
 
+import { useEffect } from 'react';
 import { CONFIG_LABELS, CONFIG_SECTIONS, useConfig, type Config, type ToggleKey } from '@/hooks/useConfig';
 
 export default function SettingsModal({ onClose }: { onClose: () => void }) {
   const config = useConfig();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const Toggle = ({ k }: { k: ToggleKey }) => {
     const { label, hint } = CONFIG_LABELS[k];

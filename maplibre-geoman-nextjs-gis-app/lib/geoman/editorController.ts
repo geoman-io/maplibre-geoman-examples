@@ -234,6 +234,13 @@ export class EditorController {
   /** Delete the currently selected feature (Del). `deleteAndNotify` removes it
    *  through the engine (records history for undo) and fires `gm:remove`, so the
    *  single handler syncs the store + DB — the same path the Delete tool uses. */
+  /** Explode the selected multipolygon into separate single-part features
+   *  (the engine fires create/remove events, which the store/DB sync handles). */
+  async explodeSelected() {
+    const id = store().selectedFeatureId;
+    if (id) await this.gm.edit.explode(id);
+  }
+
   async deleteSelected() {
     const id = store().selectedFeatureId;
     if (!id) return;
@@ -489,14 +496,25 @@ export class EditorController {
 
     this.setHoverCursor(config.hoverCursor);
     this.setCrossLayerSelect(config.crossLayerSelect);
-    this.syncHelper('snapping', config.snapping);
-    this.syncHelper('measurements', config.measurements);
+    // The engine's mode enable/disable is async; firing several at once races.
+    // Queue them so each runs to completion and the latest config wins.
+    this.helperQueue = this.helperQueue.then(() => this.applyHelpers(config));
   }
 
-  /** Bring a helper mode (snapping / measurements) to the desired on/off state. */
-  private syncHelper(name: 'snapping' | 'measurements', on: boolean) {
-    if (this.gm.options.isModeEnabled('helper', name) === on) return;
-    void this.gm.toggleMode('helper', name);
+  private helperQueue: Promise<void> = Promise.resolve();
+
+  /** Sequentially bring the background helper modes to their configured state. */
+  private async applyHelpers(config: Config) {
+    const desired: Array<['snapping' | 'measurements' | 'pin' | 'auto_trace', boolean]> = [
+      ['snapping', config.snapping],
+      ['measurements', config.measurements],
+      ['pin', config.topology],
+      ['auto_trace', config.tracing],
+    ];
+    for (const [name, on] of desired) {
+      if (this.gm.options.isModeEnabled('helper', name) === on) continue;
+      await (on ? this.gm.enableMode('helper', name) : this.gm.disableMode('helper', name));
+    }
   }
 
   private setHoverCursor(on: boolean) {

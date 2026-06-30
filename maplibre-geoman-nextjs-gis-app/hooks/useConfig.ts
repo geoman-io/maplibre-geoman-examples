@@ -20,6 +20,10 @@ export type Config = {
   snapping: boolean;
   /** Show live length/area measurements while drawing and editing. */
   measurements: boolean;
+  /** Topological editing: shared vertices of adjacent features move together. */
+  topology: boolean;
+  /** Trace new lines/polygons along existing feature edges while drawing. */
+  tracing: boolean;
   /** Snap activation distance in pixels (Geoman `snapDistance`). */
   snapTolerance: number;
   // --- Validation ---
@@ -34,6 +38,8 @@ export const DEFAULT_CONFIG: Config = {
   bodyDrag: true,
   snapping: true,
   measurements: false,
+  topology: false,
+  tracing: false,
   snapTolerance: 18,
   validateSchema: false,
 };
@@ -66,6 +72,14 @@ export const CONFIG_LABELS: Record<ToggleKey, { label: string; hint: string }> =
     label: 'Measurements',
     hint: 'Show live length / area readouts while drawing and editing.',
   },
+  topology: {
+    label: 'Topological editing',
+    hint: 'Vertices shared by adjacent features move together — no slivers or gaps.',
+  },
+  tracing: {
+    label: 'Tracing',
+    hint: 'While drawing, follow the edges of existing features.',
+  },
   validateSchema: {
     label: 'Enforce attribute schema',
     hint: 'Reject a create or edit whose attributes violate the layer’s schema.',
@@ -75,7 +89,7 @@ export const CONFIG_LABELS: Record<ToggleKey, { label: string; hint: string }> =
 /** Settings-modal layout: grouped sections of toggle keys. */
 export const CONFIG_SECTIONS: Array<{ title: string; keys: Array<ToggleKey> }> = [
   { title: 'Editing', keys: ['crossLayerSelect', 'hoverCursor', 'editSelectedOnly', 'bodyDrag'] },
-  { title: 'Helpers', keys: ['snapping', 'measurements'] },
+  { title: 'Helpers', keys: ['snapping', 'measurements', 'topology', 'tracing'] },
   { title: 'Validation', keys: ['validateSchema'] },
 ];
 
