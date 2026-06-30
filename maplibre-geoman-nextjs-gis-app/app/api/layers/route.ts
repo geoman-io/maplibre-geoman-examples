@@ -42,6 +42,8 @@ export const layerStyleShape = z
     symbology: z.any().optional(),
     labels: z.any().optional(),
     filter: z.any().optional(),
+    minZoom: z.number().optional(),
+    maxZoom: z.number().optional(),
   })
   .nullable();
 

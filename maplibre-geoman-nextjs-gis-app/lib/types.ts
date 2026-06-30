@@ -51,11 +51,15 @@ export type LayerFilter = {
   value: string;
 };
 
-/** Persisted per-layer presentation: thematic symbology, labels, filter. */
+/** Persisted per-layer presentation: thematic symbology, labels, filter, and
+ *  scale-dependent (zoom) visibility. */
 export type LayerStyleConfig = {
   symbology?: Symbology;
   labels?: LabelConfig;
   filter?: LayerFilter;
+  /** Render only within this zoom range (QGIS scale visibility). */
+  minZoom?: number;
+  maxZoom?: number;
 };
 
 /** A layer's allowed geometry (QGIS single-geometry layers). null = any. */

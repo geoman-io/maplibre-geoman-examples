@@ -6,7 +6,7 @@ import type { EditorController } from '@/lib/geoman/editorController';
 import type { LabelConfig, LayerDTO, LayerFilter, Symbology } from '@/lib/types';
 import { categorize, graduate, matchesFilter, RAMPS } from '@/lib/symbology';
 
-type Tab = 'symbology' | 'labels' | 'filter';
+type Tab = 'symbology' | 'labels' | 'filter' | 'zoom';
 
 export default function LayerStyleModal({
   layer,
@@ -33,6 +33,8 @@ export default function LayerStyleModal({
   const [ramp, setRamp] = useState('Blue');
   const [labels, setLabels] = useState<LabelConfig | null>(layer.style?.labels ?? null);
   const [filter, setFilter] = useState<LayerFilter | null>(layer.style?.filter ?? null);
+  const [minZoom, setMinZoom] = useState(layer.style?.minZoom ?? 0);
+  const [maxZoom, setMaxZoom] = useState(layer.style?.maxZoom ?? 24);
   const [saving, setSaving] = useState(false);
 
   const matchCount = useMemo(
@@ -62,6 +64,8 @@ export default function LayerStyleModal({
         symbology: sym,
         labels: labels?.field ? labels : undefined,
         filter: filter?.field ? filter : undefined,
+        minZoom,
+        maxZoom,
       });
       onClose();
     } finally {
@@ -92,7 +96,7 @@ export default function LayerStyleModal({
         </div>
 
         <div className="flex gap-1 border-b border-zinc-200 px-4 pt-2">
-          {(['symbology', 'labels', 'filter'] as const).map((t) => (
+          {(['symbology', 'labels', 'filter', 'zoom'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -376,6 +380,41 @@ export default function LayerStyleModal({
                   </p>
                 </div>
               )}
+            </>
+          )}
+
+          {tab === 'zoom' && (
+            <>
+              <p className="text-xs text-zinc-500">
+                Render this layer only within a zoom range (QGIS scale-dependent visibility).
+              </p>
+              <div className="flex items-center gap-3 text-xs text-zinc-600">
+                <label className="flex flex-1 items-center gap-2">
+                  Min zoom
+                  <input
+                    type="number"
+                    min={0}
+                    max={24}
+                    value={minZoom}
+                    onChange={(e) => setMinZoom(Math.max(0, Math.min(24, Number(e.target.value))))}
+                    className={`${input} w-full`}
+                  />
+                </label>
+                <label className="flex flex-1 items-center gap-2">
+                  Max zoom
+                  <input
+                    type="number"
+                    min={0}
+                    max={24}
+                    value={maxZoom}
+                    onChange={(e) => setMaxZoom(Math.max(0, Math.min(24, Number(e.target.value))))}
+                    className={`${input} w-full`}
+                  />
+                </label>
+              </div>
+              <p className="text-[11px] text-zinc-400">
+                0 = zoomed out, 24 = zoomed in. Default 0–24 (always visible).
+              </p>
             </>
           )}
         </div>

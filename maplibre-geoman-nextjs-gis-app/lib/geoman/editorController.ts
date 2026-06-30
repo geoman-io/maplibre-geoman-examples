@@ -275,6 +275,18 @@ export class EditorController {
       ...(layer.geometryType ? { geometryTypes: [layer.geometryType] } : {}),
     });
     this.gm.dataLayers.setData(layer.id, geoJsonFor(layer.id));
+    this.applyZoomRange(layer);
+  }
+
+  /** Apply a layer's scale-dependent (zoom) visibility to its render layers. */
+  private applyZoomRange(layer: LayerDTO) {
+    const min = layer.style?.minZoom ?? 0;
+    const max = layer.style?.maxZoom ?? 24;
+    const map = this.map();
+    const sourceId = `${SOURCE_PREFIX}${layer.id}`;
+    for (const l of map.getStyle().layers ?? []) {
+      if ((l as { source?: string }).source === sourceId) map.setLayerZoomRange(l.id, min, max);
+    }
   }
 
   /** Set a layer's attribute schema (typed fields) — persisted + applied to the
@@ -390,6 +402,7 @@ export class EditorController {
     const updated = { ...layer, style };
     store().upsertLayer(updated);
     this.gm.dataLayers.setStyle(layer.id, compileStyle(updated));
+    this.applyZoomRange(updated);
     // The filter changes which features render — re-push the (filtered) data.
     if (filterChanged) this.gm.dataLayers.setData(layer.id, geoJsonFor(layer.id));
     await api.updateLayer(layer.id, { style });
