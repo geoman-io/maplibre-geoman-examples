@@ -14,7 +14,7 @@ import { DEFAULT_CONFIG, type Config } from '@/hooks/useConfig';
 import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
 import { featureBounds, inferShape, stringProps, translateGeometry } from '@/lib/io';
-import { fillExpression } from '@/lib/symbology';
+import { fillExpression, matchesFilter } from '@/lib/symbology';
 import type {
   FeatureDTO,
   LayerDTO,
@@ -26,11 +26,14 @@ import type {
 const store = () => useEditorStore.getState();
 const featuresOf = (layerId: string) =>
   Object.values(store().features).filter((f) => f.layerId === layerId);
-const schemaOf = (layerId: string) => store().layers.find((l) => l.id === layerId)?.schema ?? null;
-/** A layer's features as styling-ready GeoJSON (typed attributes flattened). */
+/** A layer's features as styling-ready GeoJSON (typed attributes flattened),
+ *  with the layer's definition query (filter) applied. */
 const geoJsonFor = (layerId: string) => {
-  const schema = schemaOf(layerId);
-  return featuresOf(layerId).map((r) => toGeoJson(r, schema));
+  const layer = store().layers.find((l) => l.id === layerId);
+  const schema = layer?.schema ?? null;
+  return featuresOf(layerId)
+    .filter((r) => matchesFilter(r.metadata, layer?.style?.filter, schema))
+    .map((r) => toGeoJson(r, schema));
 };
 
 const SOURCE_PREFIX = 'gm_dl_';
@@ -354,11 +357,15 @@ export class EditorController {
   }
 
   /** Apply + persist a layer's presentation config: thematic symbology
-   *  (categorized/graduated fill) and attribute labels. */
+   *  (categorized/graduated fill), attribute labels, and definition query. */
   async setLayerStyle(layer: LayerDTO, style: LayerStyleConfig | null) {
+    const filterChanged =
+      JSON.stringify(layer.style?.filter ?? null) !== JSON.stringify(style?.filter ?? null);
     const updated = { ...layer, style };
     store().upsertLayer(updated);
     this.gm.dataLayers.setStyle(layer.id, compileStyle(updated));
+    // The filter changes which features render — re-push the (filtered) data.
+    if (filterChanged) this.gm.dataLayers.setData(layer.id, geoJsonFor(layer.id));
     await api.updateLayer(layer.id, { style });
   }
 

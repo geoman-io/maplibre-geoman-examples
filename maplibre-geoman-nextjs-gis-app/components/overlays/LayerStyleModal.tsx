@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import type { EditorController } from '@/lib/geoman/editorController';
-import type { LabelConfig, LayerDTO, Symbology } from '@/lib/types';
-import { categorize, graduate, RAMPS } from '@/lib/symbology';
+import type { LabelConfig, LayerDTO, LayerFilter, Symbology } from '@/lib/types';
+import { categorize, graduate, matchesFilter, RAMPS } from '@/lib/symbology';
 
-type Tab = 'symbology' | 'labels';
+type Tab = 'symbology' | 'labels' | 'filter';
 
 export default function LayerStyleModal({
   layer,
@@ -24,13 +24,24 @@ export default function LayerStyleModal({
   );
   const fields = layer.schema?.fields ?? [];
   const numericFields = fields.filter((f) => f.type === 'number' || f.type === 'integer');
+  const enumOptions = (name: string) =>
+    fields.find((f) => f.name === name && f.type === 'enum')?.options;
 
   const [tab, setTab] = useState<Tab>('symbology');
   const [sym, setSym] = useState<Symbology>(layer.style?.symbology ?? { mode: 'single' });
   const [classes, setClasses] = useState(5);
   const [ramp, setRamp] = useState('Blue');
   const [labels, setLabels] = useState<LabelConfig | null>(layer.style?.labels ?? null);
+  const [filter, setFilter] = useState<LayerFilter | null>(layer.style?.filter ?? null);
   const [saving, setSaving] = useState(false);
+
+  const matchCount = useMemo(
+    () =>
+      filter?.field
+        ? layerFeatures.filter((f) => matchesFilter(f.metadata, filter, layer.schema)).length
+        : layerFeatures.length,
+    [filter, layerFeatures, layer.schema],
+  );
 
   const setMode = (mode: Symbology['mode']) => {
     if (mode === 'single') return setSym({ mode: 'single' });
@@ -50,6 +61,7 @@ export default function LayerStyleModal({
         ...layer.style,
         symbology: sym,
         labels: labels?.field ? labels : undefined,
+        filter: filter?.field ? filter : undefined,
       });
       onClose();
     } finally {
@@ -80,7 +92,7 @@ export default function LayerStyleModal({
         </div>
 
         <div className="flex gap-1 border-b border-zinc-200 px-4 pt-2">
-          {(['symbology', 'labels'] as const).map((t) => (
+          {(['symbology', 'labels', 'filter'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -293,6 +305,75 @@ export default function LayerStyleModal({
                       />
                     </label>
                   </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {tab === 'filter' && (
+            <>
+              <p className="text-xs text-zinc-500">
+                Show only features matching a condition (QGIS definition query).
+              </p>
+              <label className="flex items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={!!filter}
+                  disabled={fields.length === 0}
+                  onChange={(e) =>
+                    setFilter(e.target.checked ? { field: fields[0]?.name ?? '', op: '=', value: '' } : null)
+                  }
+                />
+                Enable filter
+              </label>
+              {filter && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <select
+                      className={`${input} flex-1`}
+                      value={filter.field}
+                      onChange={(e) => setFilter({ ...filter, field: e.target.value })}
+                    >
+                      {fields.map((f) => (
+                        <option key={f.name} value={f.name}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className={input}
+                      value={filter.op}
+                      onChange={(e) => setFilter({ ...filter, op: e.target.value as LayerFilter['op'] })}
+                    >
+                      {(['=', '!=', '>', '>=', '<', '<=', 'contains'] as const).map((o) => (
+                        <option key={o}>{o}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {enumOptions(filter.field) ? (
+                    <select
+                      className={`${input} w-full`}
+                      value={filter.value}
+                      onChange={(e) => setFilter({ ...filter, value: e.target.value })}
+                    >
+                      <option value="">—</option>
+                      {enumOptions(filter.field)!.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.value}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      className={`${input} w-full`}
+                      value={filter.value}
+                      onChange={(e) => setFilter({ ...filter, value: e.target.value })}
+                      placeholder="value"
+                    />
+                  )}
+                  <p className="text-xs text-zinc-500">
+                    {matchCount} of {layerFeatures.length} features match
+                  </p>
                 </div>
               )}
             </>

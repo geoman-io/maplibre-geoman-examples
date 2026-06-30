@@ -1,4 +1,4 @@
-import type { FeatureDTO, Symbology } from '@/lib/types';
+import type { FeatureDTO, LayerFilter, LayerSchema, Symbology } from '@/lib/types';
 
 // Categorical palette (distinct hues) + sequential ramps for graduated classes.
 export const CATEGORY_PALETTE = [
@@ -75,4 +75,37 @@ export const fillExpression = (sym: Symbology): unknown => {
     };
   }
   return undefined;
+};
+
+/** Evaluate a definition query against a feature's metadata. No filter (or no
+ *  field) matches everything; a missing attribute is excluded. */
+export const matchesFilter = (
+  metadata: Record<string, string>,
+  filter: LayerFilter | undefined | null,
+  schema?: LayerSchema | null,
+): boolean => {
+  if (!filter?.field) return true;
+  const raw = metadata[filter.field];
+  if (raw == null || raw === '') return false;
+
+  const type = schema?.fields.find((f) => f.name === filter.field)?.type;
+  if (type === 'number' || type === 'integer') {
+    const a = Number(raw);
+    const b = Number(filter.value);
+    switch (filter.op) {
+      case '=': return a === b;
+      case '!=': return a !== b;
+      case '>': return a > b;
+      case '>=': return a >= b;
+      case '<': return a < b;
+      case '<=': return a <= b;
+      case 'contains': return raw.includes(filter.value);
+    }
+  }
+  switch (filter.op) {
+    case '=': return raw === filter.value;
+    case '!=': return raw !== filter.value;
+    case 'contains': return raw.toLowerCase().includes(filter.value.toLowerCase());
+    default: return false; // ordering ops are meaningless on text
+  }
 };
