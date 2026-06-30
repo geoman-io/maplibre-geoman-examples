@@ -366,6 +366,25 @@ export class EditorController {
   private hoverHandler: ((e: maplibregl.MapMouseEvent) => void) | null = null;
   private clickHandler: ((e: maplibregl.MapMouseEvent) => void) | null = null;
 
+  /** Fly the map to a coordinate (locator / geocoder result). */
+  flyTo(lng: number, lat: number, zoom = 14) {
+    this.map().flyTo({ center: [lng, lat], zoom, duration: 800 });
+  }
+
+  /** Switch the raster basemap in place, or hide it (`null`). Only swaps the
+   *  basemap source's tiles, so the Geoman editing layers are never disturbed. */
+  setBasemap(tiles: string | null) {
+    const map = this.map();
+    const layerId = 'osm-tiles-layer';
+    if (!map.getLayer(layerId)) return;
+    if (tiles === null) {
+      map.setLayoutProperty(layerId, 'visibility', 'none');
+      return;
+    }
+    map.setLayoutProperty(layerId, 'visibility', 'visible');
+    (map.getSource('osm-tiles') as maplibregl.RasterTileSource | undefined)?.setTiles?.([tiles]);
+  }
+
   private map() {
     return this.gm.mapAdapter.getMapInstance() as unknown as maplibregl.Map;
   }

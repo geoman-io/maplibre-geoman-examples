@@ -7,6 +7,7 @@ import UserMenu from '@/components/overlays/UserMenu';
 import Toolbar from '@/components/overlays/Toolbar';
 import StatusBar from '@/components/overlays/StatusBar';
 import LayerPanel from '@/components/overlays/LayerPanel';
+import Locator from '@/components/overlays/Locator';
 import MetadataEditor from '@/components/overlays/MetadataEditor';
 import AttributeTable from '@/components/overlays/AttributeTable';
 import SettingsModal from '@/components/overlays/SettingsModal';
@@ -88,6 +89,10 @@ export default function MapView() {
 
         {ready && (
           <>
+            <div className="absolute left-4 top-4">
+              <Locator controller={controller} />
+            </div>
+
             <div className="absolute left-1/2 top-4 -translate-x-1/2">
               <Toolbar gm={handle.gm} controller={controller} />
             </div>
