@@ -330,15 +330,12 @@ export class EditorController {
   }
 
   /**
-   * Re-stack the data-layer render layers (`gm_dl_<id>-fill/line/circle`) so the
-   * given order renders top-first, keeping the whole data-layer band in place
-   * (below whatever currently sits above it — Geoman's edit overlays). Each
-   * layer is moved before that ceiling in reverse order, so `orderedTopFirst[0]`
-   * ends up on top.
+   * Re-stack the data layers so `orderedTopFirst[0]` renders on top. Delegates
+   * to the engine (maplibre-geoman-pro >= 0.9.2-alpha.2), which owns the
+   * render-group (fill/line/circle) and data-layer-band semantics — previously
+   * an app-side `map.moveLayer` loop here.
    */
   private restackLayers(orderedTopFirst: string[]) {
-    // The engine owns the data-layer band + render-group semantics
-    // (maplibre-geoman-pro >= 0.9.2-alpha.2). orderedTopFirst[0] renders on top.
     this.gm.dataLayers.reorder(orderedTopFirst);
   }
 
