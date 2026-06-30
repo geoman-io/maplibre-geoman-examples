@@ -1,23 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { EditorController } from '@/lib/geoman/editorController';
-import { BASEMAPS } from '@/lib/basemaps';
 
-/** Top-left locator: jump to a place name (Nominatim geocoder) or a "lat, lng"
- *  coordinate, plus a basemap switcher. */
+/** Collapsible search: a magnifier icon that expands to a place / "lat, lng"
+ *  search (Nominatim geocoder). Keeps the top-left corner uncluttered. */
 export default function Locator({ controller }: { controller: EditorController }) {
+  const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const [basemap, setBasemap] = useState('osm');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
 
   const search = async () => {
     const query = q.trim();
     if (!query) return;
     setNote(null);
 
-    // "lat, lng" coordinate?
     const m = query.match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/);
     if (m) {
       const lat = Number(m[1]);
@@ -28,7 +31,6 @@ export default function Locator({ controller }: { controller: EditorController }
       }
     }
 
-    // place name → geocode
     setBusy(true);
     try {
       const res = await fetch(
@@ -49,19 +51,33 @@ export default function Locator({ controller }: { controller: EditorController }
     }
   };
 
-  const pickBasemap = (id: string) => {
-    setBasemap(id);
-    const bm = BASEMAPS.find((b) => b.id === id);
-    if (bm) controller.setBasemap(bm.tiles);
-  };
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Search location"
+        title="Search location"
+        className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-zinc-600 shadow-lg ring-1 ring-black/5 backdrop-blur transition-colors hover:text-blue-600"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      </button>
+    );
+  }
 
   return (
     <div className="pointer-events-auto w-72 rounded-xl bg-white/95 p-2 shadow-lg ring-1 ring-black/5 backdrop-blur">
       <div className="flex gap-1.5">
         <input
+          ref={inputRef}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && search()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') search();
+            if (e.key === 'Escape') setOpen(false);
+          }}
           placeholder="Search place or lat, lng"
           aria-label="Search location"
           className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -78,25 +94,20 @@ export default function Locator({ controller }: { controller: EditorController }
             <path d="m21 21-4.3-4.3" />
           </svg>
         </button>
+        <button
+          onClick={() => setOpen(false)}
+          aria-label="Close search"
+          title="Close"
+          className="rounded-lg px-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+        >
+          ✕
+        </button>
       </div>
       {note && (
         <p className="truncate px-1 pt-1 text-[11px] text-zinc-500" title={note}>
           {note}
         </p>
       )}
-      <div className="mt-1.5 flex gap-1">
-        {BASEMAPS.map((b) => (
-          <button
-            key={b.id}
-            onClick={() => pickBasemap(b.id)}
-            className={`flex-1 rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors ${
-              basemap === b.id ? 'bg-blue-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-            }`}
-          >
-            {b.name}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

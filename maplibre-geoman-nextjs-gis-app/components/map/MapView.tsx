@@ -8,6 +8,7 @@ import Toolbar from '@/components/overlays/Toolbar';
 import StatusBar from '@/components/overlays/StatusBar';
 import LayerPanel from '@/components/overlays/LayerPanel';
 import Locator from '@/components/overlays/Locator';
+import BasemapControl from '@/components/overlays/BasemapControl';
 import MetadataEditor from '@/components/overlays/MetadataEditor';
 import AttributeTable from '@/components/overlays/AttributeTable';
 import SettingsModal from '@/components/overlays/SettingsModal';
@@ -101,11 +102,10 @@ export default function MapView() {
               <StatusBar gm={handle.gm} />
             </div>
 
-            {!tableOpen && (
-              <div className="absolute bottom-4 right-4">
-                <MetadataEditor controller={controller} />
-              </div>
-            )}
+            <div className="absolute bottom-4 right-4 flex flex-col items-end gap-3">
+              {!tableOpen && <MetadataEditor controller={controller} />}
+              <BasemapControl controller={controller} />
+            </div>
 
             {!tableOpen && (
               <button

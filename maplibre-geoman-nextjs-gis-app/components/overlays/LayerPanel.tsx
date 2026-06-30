@@ -227,7 +227,7 @@ export default function LayerPanel({
                 {counts[layer.id] ?? 0}
               </span>
               <button
-                title="Layer properties (symbology / labels)"
+                title="Layer properties — symbology, labels, filter"
                 aria-label={`Style ${layer.name}`}
                 onClick={() => setStyleLayer(layer)}
                 className={`transition-colors hover:text-blue-600 ${
