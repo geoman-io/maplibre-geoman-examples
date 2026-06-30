@@ -1,7 +1,7 @@
 'use client';
 
 import type { Feature } from 'geojson';
-import type { FeatureDTO, LayerDTO, LayerSchema } from '@/lib/types';
+import type { FeatureDTO, GeometryType, LayerDTO, LayerSchema } from '@/lib/types';
 
 async function http<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -25,6 +25,7 @@ export const createLayer = (input: {
   borderColor?: string;
   sortOrder?: number;
   schema?: LayerSchema | null;
+  geometryType?: GeometryType | null;
 }) =>
   http<{ layer: LayerDTO }>('/api/layers', {
     method: 'POST',
@@ -34,7 +35,10 @@ export const createLayer = (input: {
 export const updateLayer = (
   id: string,
   patch: Partial<
-    Pick<LayerDTO, 'name' | 'color' | 'borderColor' | 'visible' | 'sortOrder' | 'schema' | 'style'>
+    Pick<
+      LayerDTO,
+      'name' | 'color' | 'borderColor' | 'visible' | 'sortOrder' | 'schema' | 'style' | 'geometryType'
+    >
   >,
 ) =>
   http<{ layer: LayerDTO }>(`/api/layers/${id}`, {

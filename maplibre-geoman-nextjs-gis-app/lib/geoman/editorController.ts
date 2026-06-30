@@ -17,6 +17,7 @@ import { featureBounds, inferShape, stringProps, translateGeometry } from '@/lib
 import { fillExpression, matchesFilter } from '@/lib/symbology';
 import type {
   FeatureDTO,
+  GeometryType,
   LayerDTO,
   LayerSchema,
   LayerStyleConfig,
@@ -257,6 +258,7 @@ export class EditorController {
       visible: layer.visible,
       style: compileStyle(layer),
       ...(layer.schema ? { schema: layer.schema } : {}),
+      ...(layer.geometryType ? { geometryTypes: [layer.geometryType] } : {}),
     });
     this.gm.dataLayers.setData(layer.id, geoJsonFor(layer.id));
   }
@@ -304,12 +306,18 @@ export class EditorController {
     store().setActiveLayer(id);
   }
 
-  async createLayer(name: string, color: string, borderColor: string) {
+  async createLayer(
+    name: string,
+    color: string,
+    borderColor: string,
+    geometryType: GeometryType | null = null,
+  ) {
     const layer = await api.createLayer({
       name,
       color,
       borderColor,
       sortOrder: store().layers.length,
+      geometryType,
     });
     store().upsertLayer(layer);
     this.addGeomanLayer(layer, false); // added as display, then promoted

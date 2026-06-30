@@ -29,6 +29,13 @@
       "when": 1782803598744,
       "tag": "0003_futuristic_stick",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782814487170,
+      "tag": "0004_brainy_kronos",
+      "breakpoints": true
     }
   ]
 }

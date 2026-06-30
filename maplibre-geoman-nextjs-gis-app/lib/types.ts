@@ -58,6 +58,9 @@ export type LayerStyleConfig = {
   filter?: LayerFilter;
 };
 
+/** A layer's allowed geometry (QGIS single-geometry layers). null = any. */
+export type GeometryType = 'point' | 'line' | 'polygon';
+
 /** Client-side mirror of the `layer` row (dates serialised as ISO strings). */
 export type LayerDTO = {
   id: string;
@@ -69,6 +72,7 @@ export type LayerDTO = {
   sortOrder: number;
   schema: LayerSchema | null;
   style: LayerStyleConfig | null;
+  geometryType: GeometryType | null;
   createdAt: string;
   updatedAt: string;
 };

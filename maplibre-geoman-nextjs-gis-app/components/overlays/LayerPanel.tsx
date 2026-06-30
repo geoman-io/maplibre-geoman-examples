@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import type { EditorController } from '@/lib/geoman/editorController';
-import type { LayerDTO } from '@/lib/types';
+import type { GeometryType, LayerDTO } from '@/lib/types';
 import SchemaEditor from '@/components/overlays/SchemaEditor';
 import LayerStyleModal from '@/components/overlays/LayerStyleModal';
 
@@ -61,6 +61,7 @@ export default function LayerPanel({
   const activeLayerId = useEditorStore((s) => s.activeLayerId);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [geomType, setGeomType] = useState<GeometryType | null>(null);
   const [schemaLayer, setSchemaLayer] = useState<LayerDTO | null>(null);
   const [styleLayer, setStyleLayer] = useState<LayerDTO | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -91,7 +92,7 @@ export default function LayerPanel({
     const [color, borderColor] = PALETTE[layers.length % PALETTE.length];
     setBusy(true);
     try {
-      await controller.createLayer(trimmed, color, borderColor);
+      await controller.createLayer(trimmed, color, borderColor, geomType);
       setName('');
     } finally {
       setBusy(false);
@@ -272,22 +273,38 @@ export default function LayerPanel({
         })}
       </div>
 
-      <div className="flex gap-2 border-t border-zinc-200 p-2.5">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addLayer()}
-          placeholder="New layer name"
-          aria-label="New layer name"
-          className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
-        <button
-          onClick={addLayer}
-          disabled={busy}
-          className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
-        >
-          Add
-        </button>
+      <div className="space-y-2 border-t border-zinc-200 p-2.5">
+        <div className="flex gap-1">
+          {([null, 'point', 'line', 'polygon'] as const).map((g) => (
+            <button
+              key={g ?? 'any'}
+              onClick={() => setGeomType(g)}
+              title={g ? `New layers accept ${g} geometry only` : 'New layers accept any geometry'}
+              className={`flex-1 rounded-md px-1.5 py-1 text-[11px] font-medium capitalize transition-colors ${
+                geomType === g ? 'bg-blue-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              }`}
+            >
+              {g ?? 'Any'}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addLayer()}
+            placeholder="New layer name"
+            aria-label="New layer name"
+            className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+          <button
+            onClick={addLayer}
+            disabled={busy}
+            className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+          >
+            Add
+          </button>
+        </div>
       </div>
 
       {schemaLayer && (

@@ -45,12 +45,15 @@ export const layerStyleShape = z
   })
   .nullable();
 
+export const geometryTypeShape = z.enum(['point', 'line', 'polygon']).nullable();
+
 const createSchema = z.object({
   name: z.string().min(1).max(120),
   color: hex.optional(),
   borderColor: hex.optional(),
   sortOrder: z.number().int().optional(),
   schema: layerSchemaShape.optional(),
+  geometryType: geometryTypeShape.optional(),
 });
 
 export async function POST(req: Request) {
@@ -70,6 +73,7 @@ export async function POST(req: Request) {
       borderColor: parsed.data.borderColor ?? '#1d4ed8',
       sortOrder: parsed.data.sortOrder ?? 0,
       schema: parsed.data.schema ?? null,
+      geometryType: parsed.data.geometryType ?? null,
     })
     .returning();
 

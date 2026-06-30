@@ -4,6 +4,21 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Geoman } from '@geoman-io/maplibre-geoman-pro';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import type { EditorController } from '@/lib/geoman/editorController';
+import type { GeometryType } from '@/lib/types';
+
+/** Which geometry kind each draw tool produces — used to hide draw tools that a
+ *  single-geometry layer wouldn't accept. */
+const SHAPE_KIND: Record<string, GeometryType> = {
+  marker: 'point',
+  text_marker: 'point',
+  circle_marker: 'point',
+  line: 'line',
+  freehand: 'line',
+  polygon: 'polygon',
+  rectangle: 'polygon',
+  circle: 'polygon',
+  ellipse: 'polygon',
+};
 
 const S = (children: ReactNode) => (
   <svg viewBox="0 0 24 24" className="h-[17px] w-[17px]" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -138,6 +153,9 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
   // Every edit/draw tool needs a layer to write into — without one a drawn
   // shape would land in no layer and never persist.
   const hasActiveLayer = useEditorStore((s) => s.activeLayerId !== null);
+  const activeLayerId = useEditorStore((s) => s.activeLayerId);
+  const layers = useEditorStore((s) => s.layers);
+  const activeGeom = layers.find((l) => l.id === activeLayerId)?.geometryType ?? null;
   const canUndo = useEditorStore((s) => s.canUndo);
   const canRedo = useEditorStore((s) => s.canRedo);
   // Single source of truth — so Esc (which clears it) also un-highlights here.
@@ -198,7 +216,10 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
       {GROUPS.map((g, gi) => (
         <div key={g.name} className="flex items-center gap-0.5">
           {gi > 0 && sep(`sep-${g.name}`)}
-          {g.tools.map((t) =>
+          {(g.name === 'Digitize' && activeGeom
+            ? g.tools.filter((t) => SHAPE_KIND[t.id] === activeGeom)
+            : g.tools
+          ).map((t) =>
             tbtn(
               t.id,
               t.icon,

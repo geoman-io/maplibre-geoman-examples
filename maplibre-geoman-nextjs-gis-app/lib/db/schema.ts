@@ -93,6 +93,9 @@ export const layer = pgTable(
     // Optional presentation config: thematic symbology, labels, definition
     // query. Shape = lib/types.ts LayerStyleConfig.
     style: jsonb('style').$type<import('@/lib/types').LayerStyleConfig>(),
+    // Allowed geometry kind ('point'|'line'|'polygon'); null = any (QGIS layers
+    // are single-geometry). Passed to the engine as `geometryTypes`.
+    geometryType: text('geometry_type').$type<import('@/lib/types').GeometryType>(),
     createdAt: timestamp('created_at')
       .$defaultFn(() => new Date())
       .notNull(),
