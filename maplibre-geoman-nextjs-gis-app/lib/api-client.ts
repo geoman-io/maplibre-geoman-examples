@@ -34,7 +34,7 @@ export const createLayer = (input: {
 export const updateLayer = (
   id: string,
   patch: Partial<
-    Pick<LayerDTO, 'name' | 'color' | 'borderColor' | 'visible' | 'sortOrder' | 'schema'>
+    Pick<LayerDTO, 'name' | 'color' | 'borderColor' | 'visible' | 'sortOrder' | 'schema' | 'style'>
   >,
 ) =>
   http<{ layer: LayerDTO }>(`/api/layers/${id}`, {

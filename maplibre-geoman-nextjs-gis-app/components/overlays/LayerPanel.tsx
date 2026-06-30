@@ -5,6 +5,7 @@ import { useEditorStore } from '@/hooks/useEditorStore';
 import type { EditorController } from '@/lib/geoman/editorController';
 import type { LayerDTO } from '@/lib/types';
 import SchemaEditor from '@/components/overlays/SchemaEditor';
+import LayerStyleModal from '@/components/overlays/LayerStyleModal';
 
 // fill / border palette pairs
 const PALETTE: Array<[string, string]> = [
@@ -61,6 +62,7 @@ export default function LayerPanel({
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [schemaLayer, setSchemaLayer] = useState<LayerDTO | null>(null);
+  const [styleLayer, setStyleLayer] = useState<LayerDTO | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -225,6 +227,25 @@ export default function LayerPanel({
                 {counts[layer.id] ?? 0}
               </span>
               <button
+                title="Layer properties (symbology / labels)"
+                aria-label={`Style ${layer.name}`}
+                onClick={() => setStyleLayer(layer)}
+                className={`transition-colors hover:text-blue-600 ${
+                  (layer.style?.symbology && layer.style.symbology.mode !== 'single') ||
+                  layer.style?.labels
+                    ? 'text-blue-500'
+                    : 'text-zinc-300'
+                }`}
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="13.5" cy="6.5" r=".75" fill="currentColor" stroke="none" />
+                  <circle cx="17.5" cy="10.5" r=".75" fill="currentColor" stroke="none" />
+                  <circle cx="8.5" cy="7.5" r=".75" fill="currentColor" stroke="none" />
+                  <circle cx="6.5" cy="12.5" r=".75" fill="currentColor" stroke="none" />
+                  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.83-.44-1.12-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.66h2C18.5 16.28 22 12.78 22 8.5 22 4.42 17.5 2 12 2Z" />
+                </svg>
+              </button>
+              <button
                 title={`Edit schema${layer.schema?.fields.length ? ` (${layer.schema.fields.length} fields)` : ''}`}
                 aria-label={`Edit schema for ${layer.name}`}
                 onClick={() => setSchemaLayer(layer)}
@@ -274,6 +295,14 @@ export default function LayerPanel({
           layer={schemaLayer}
           controller={controller}
           onClose={() => setSchemaLayer(null)}
+        />
+      )}
+
+      {styleLayer && (
+        <LayerStyleModal
+          layer={styleLayer}
+          controller={controller}
+          onClose={() => setStyleLayer(null)}
         />
       )}
     </div>

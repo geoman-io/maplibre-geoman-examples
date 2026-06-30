@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { layer } from '@/lib/db/schema';
 import { badRequest, getUser, notFound, unauthorized } from '@/lib/api';
-import { layerSchemaShape } from '@/app/api/layers/route';
+import { layerSchemaShape, layerStyleShape } from '@/app/api/layers/route';
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
@@ -15,6 +15,7 @@ const patchSchema = z.object({
   visible: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
   schema: layerSchemaShape.optional(),
+  style: layerStyleShape.optional(),
 });
 
 export async function PATCH(

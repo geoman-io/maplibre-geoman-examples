@@ -90,6 +90,9 @@ export const layer = pgTable(
     // drives the typed attribute editor + validation. Shape mirrors the
     // library's FeatureSchema (see lib/types.ts LayerSchema).
     schema: jsonb('schema').$type<import('@/lib/types').LayerSchema>(),
+    // Optional presentation config: thematic symbology, labels, definition
+    // query. Shape = lib/types.ts LayerStyleConfig.
+    style: jsonb('style').$type<import('@/lib/types').LayerStyleConfig>(),
     createdAt: timestamp('created_at')
       .$defaultFn(() => new Date())
       .notNull(),

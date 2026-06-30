@@ -1,6 +1,11 @@
 'use client';
 
-import type { DataLayerStyle, FeatureData, Geoman } from '@geoman-io/maplibre-geoman-pro';
+import type {
+  DataLayerStyle,
+  FeatureData,
+  Geoman,
+  StyleValue,
+} from '@geoman-io/maplibre-geoman-pro';
 import type maplibregl from 'maplibre-gl';
 import type { Feature } from 'geojson';
 import type { FeatureCollection } from 'geojson';
@@ -9,39 +14,96 @@ import { DEFAULT_CONFIG, type Config } from '@/hooks/useConfig';
 import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
 import { featureBounds, inferShape, stringProps, translateGeometry } from '@/lib/io';
-import type { FeatureDTO, LayerDTO, LayerSchema, SchemaValidationResult } from '@/lib/types';
+import { fillExpression } from '@/lib/symbology';
+import type {
+  FeatureDTO,
+  LayerDTO,
+  LayerSchema,
+  LayerStyleConfig,
+  SchemaValidationResult,
+} from '@/lib/types';
 
 const store = () => useEditorStore.getState();
 const featuresOf = (layerId: string) =>
   Object.values(store().features).filter((f) => f.layerId === layerId);
+const schemaOf = (layerId: string) => store().layers.find((l) => l.id === layerId)?.schema ?? null;
+/** A layer's features as styling-ready GeoJSON (typed attributes flattened). */
+const geoJsonFor = (layerId: string) => {
+  const schema = schemaOf(layerId);
+  return featuresOf(layerId).map((r) => toGeoJson(r, schema));
+};
 
 const SOURCE_PREFIX = 'gm_dl_';
 const layerIdFromSource = (sourceId: string) =>
   sourceId.startsWith(SOURCE_PREFIX) ? sourceId.slice(SOURCE_PREFIX.length) : null;
 
-/** A LayerDTO's colours expressed as a Geoman data-layer style. */
-const toStyle = (layer: LayerDTO): DataLayerStyle => ({
-  polygon: {
-    fillColor: layer.color,
-    fillOpacity: 0.3,
-    strokeColor: layer.borderColor,
-    strokeWidth: 2,
-  },
-  line: { color: layer.borderColor, width: 3 },
-  point: { color: layer.color, radius: 6, strokeColor: layer.borderColor, strokeWidth: 2 },
-});
+/** Coerce string metadata to typed values (per the schema) so thematic styling
+ *  and labels can read attributes via `['get', field]` on rendered features. */
+const coerceProps = (
+  metadata: Record<string, string>,
+  schema?: LayerSchema | null,
+): Record<string, unknown> => {
+  const out: Record<string, unknown> = { ...metadata };
+  for (const f of schema?.fields ?? []) {
+    const raw = metadata[f.name];
+    if (raw == null || raw === '') continue;
+    out[f.name] =
+      f.type === 'number' || f.type === 'integer'
+        ? Number(raw)
+        : f.type === 'boolean'
+          ? raw === 'true'
+          : raw;
+  }
+  return out;
+};
 
-/** A stored feature as GeoJSON for `dataLayers.setData`, with a stable id. */
-const toGeoJson = (row: FeatureDTO): Feature => ({
+/** A stored feature as GeoJSON for `dataLayers.setData`, with a stable id and
+ *  its (typed) metadata fields flattened onto `properties` for styling/labels. */
+const toGeoJson = (row: FeatureDTO, schema?: LayerSchema | null): Feature => ({
   ...(row.geojson as Feature),
   id: row.id,
   properties: {
     ...((row.geojson as Feature).properties ?? {}),
+    ...coerceProps(row.metadata, schema),
     id: row.id,
     ...(row.shape ? { shape: row.shape } : {}),
     metadata: row.metadata,
   },
 });
+
+/** A LayerDTO's presentation as a Geoman data-layer style — flat colours, plus
+ *  thematic symbology (categorized/graduated fill) and labels when configured. */
+const compileStyle = (layer: LayerDTO): DataLayerStyle => {
+  const sym = layer.style?.symbology;
+  const fill =
+    sym && sym.mode !== 'single' ? (fillExpression(sym) as StyleValue<string>) : undefined;
+  const labels = layer.style?.labels;
+  return {
+    polygon: {
+      fillColor: fill ?? layer.color,
+      fillOpacity: 0.3,
+      strokeColor: layer.borderColor,
+      strokeWidth: 2,
+    },
+    line: { color: layer.borderColor, width: 3 },
+    point: {
+      color: fill ?? layer.color,
+      radius: 6,
+      strokeColor: layer.borderColor,
+      strokeWidth: 2,
+    },
+    ...(labels?.field
+      ? {
+          label: {
+            field: labels.field,
+            ...(labels.size ? { size: labels.size } : {}),
+            ...(labels.color ? { color: labels.color } : {}),
+            ...(labels.haloColor ? { haloColor: labels.haloColor } : {}),
+          },
+        }
+      : {}),
+  };
+};
 
 /**
  * Thin glue between the app store/API and Geoman's `dataLayers` engine. Each
@@ -162,7 +224,7 @@ export class EditorController {
       metadata: {},
     });
     store().upsertFeature(dto);
-    this.gm.dataLayers.setData(layerId, featuresOf(layerId).map(toGeoJson));
+    this.gm.dataLayers.setData(layerId, geoJsonFor(layerId));
     store().setSelectedFeature(id);
   }
 
@@ -183,10 +245,10 @@ export class EditorController {
       name: layer.name,
       editable,
       visible: layer.visible,
-      style: toStyle(layer),
+      style: compileStyle(layer),
       ...(layer.schema ? { schema: layer.schema } : {}),
     });
-    this.gm.dataLayers.setData(layer.id, featuresOf(layer.id).map(toGeoJson));
+    this.gm.dataLayers.setData(layer.id, geoJsonFor(layer.id));
   }
 
   /** Set a layer's attribute schema (typed fields) — persisted + applied to the
@@ -227,7 +289,7 @@ export class EditorController {
     await this.gm.dataLayers.setEditable(id, true);
     // setEditable(true) only flips registration; load this layer's features
     // from our authoritative store into the editable featureStore.
-    this.gm.dataLayers.setData(id, featuresOf(id).map(toGeoJson));
+    this.gm.dataLayers.setData(id, geoJsonFor(id));
     await this.gm.dataLayers.setActive(id);
     store().setActiveLayer(id);
   }
@@ -287,8 +349,17 @@ export class EditorController {
   async applyColors(layer: LayerDTO, color: string, borderColor: string) {
     const updated = { ...layer, color, borderColor };
     store().upsertLayer(updated);
-    this.gm.dataLayers.setStyle(layer.id, toStyle(updated));
+    this.gm.dataLayers.setStyle(layer.id, compileStyle(updated));
     await api.updateLayer(layer.id, { color, borderColor });
+  }
+
+  /** Apply + persist a layer's presentation config: thematic symbology
+   *  (categorized/graduated fill) and attribute labels. */
+  async setLayerStyle(layer: LayerDTO, style: LayerStyleConfig | null) {
+    const updated = { ...layer, style };
+    store().upsertLayer(updated);
+    this.gm.dataLayers.setStyle(layer.id, compileStyle(updated));
+    await api.updateLayer(layer.id, { style });
   }
 
   async deleteLayer(layer: LayerDTO) {
@@ -328,7 +399,7 @@ export class EditorController {
         }),
     );
     for (const dto of dtos) store().upsertFeature(dto);
-    this.gm.dataLayers.setData(layerId, featuresOf(layerId).map(toGeoJson));
+    this.gm.dataLayers.setData(layerId, geoJsonFor(layerId));
   }
 
   /** Fit the map to a feature's bounds. */
