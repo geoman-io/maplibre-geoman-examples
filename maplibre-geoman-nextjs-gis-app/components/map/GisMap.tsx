@@ -25,12 +25,15 @@ function buildGmOptions(): NonNullable<ConstructorParameters<typeof Geoman>[1]> 
       // Globally-unique feature ids so they never collide across layers/reloads
       // (features are keyed by id in the DB with a (userId, id) primary key).
       idGenerator: () => crypto.randomUUID(),
+      // Snap distance + schema enforcement come from the persisted config.
+      snapDistance: c.snapTolerance,
+      validateSchema: c.validateSchema,
     },
     controls: {
       // QGIS node tool: vertex markers only for the selected feature; a body
       // click selects + drags. Both come from the persisted config.
       edit: { change: { settings: { editSelectedOnly: c.editSelectedOnly, bodyDragEnabled: c.bodyDrag } } },
-      helper: { snapping: { uiEnabled: true, active: true } },
+      helper: { snapping: { uiEnabled: true, active: c.snapping } },
     },
   };
 }

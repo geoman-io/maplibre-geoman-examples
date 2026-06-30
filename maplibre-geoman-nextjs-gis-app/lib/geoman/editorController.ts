@@ -482,8 +482,21 @@ export class EditorController {
       settings.editSelectedOnly = config.editSelectedOnly;
       settings.bodyDragEnabled = config.bodyDrag;
     }
+    // Engine-wide settings (read live by the snapping helper / create-update gates).
+    const top = this.gm.options.settings as { snapDistance?: number; validateSchema?: boolean };
+    top.snapDistance = config.snapTolerance;
+    top.validateSchema = config.validateSchema;
+
     this.setHoverCursor(config.hoverCursor);
     this.setCrossLayerSelect(config.crossLayerSelect);
+    this.syncHelper('snapping', config.snapping);
+    this.syncHelper('measurements', config.measurements);
+  }
+
+  /** Bring a helper mode (snapping / measurements) to the desired on/off state. */
+  private syncHelper(name: 'snapping' | 'measurements', on: boolean) {
+    if (this.gm.options.isModeEnabled('helper', name) === on) return;
+    void this.gm.toggleMode('helper', name);
   }
 
   private setHoverCursor(on: boolean) {

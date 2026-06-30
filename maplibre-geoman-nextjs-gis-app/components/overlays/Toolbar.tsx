@@ -125,10 +125,6 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
 ];
 
 export default function Toolbar({ gm, controller }: { gm: Geoman; controller: EditorController }) {
-  const [helpers, setHelpers] = useState<{ measurements: boolean; snapping: boolean }>({
-    measurements: false,
-    snapping: true,
-  });
   const hasSelection = useEditorStore((s) => s.selectedFeatureId !== null);
   // Every edit/draw tool needs a layer to write into — without one a drawn
   // shape would land in no layer and never persist.
@@ -164,12 +160,6 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
       useEditorStore.getState().setActiveTool({ key: 'select', title: 'Select' });
     })();
   }, [hasActiveLayer, gm]);
-
-  const toggleHelper = async (id: 'measurements' | 'snapping') => {
-    const next = !helpers[id];
-    setHelpers((h) => ({ ...h, [id]: next }));
-    await gm.toggleMode('helper', id);
-  };
 
   const tbtn = (key: string, icon: string, title: string, onClick: () => void, opts: { on?: boolean; disabled?: boolean; tooltip?: string } = {}) => (
     <button
@@ -215,8 +205,6 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
         </div>
       ))}
       {sep('sep-helpers')}
-      {tbtn('measurements', 'measure', 'Measure (length / area)', () => toggleHelper('measurements'), { on: helpers.measurements })}
-      {tbtn('snapping', 'snap', 'Snapping', () => toggleHelper('snapping'), { on: helpers.snapping })}
       {tbtn('zoom', 'zoom', 'Zoom to features', () => controller.zoomToAll())}
     </div>
   );
