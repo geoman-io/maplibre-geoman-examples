@@ -15,6 +15,7 @@ import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
 import { featureBounds, inferShape, stringProps, translateGeometry } from '@/lib/io';
 import { fillExpression, matchesFilter } from '@/lib/symbology';
+import { simplifyFeature } from '@/lib/simplify';
 import type {
   FeatureDTO,
   GeometryType,
@@ -240,6 +241,19 @@ export class EditorController {
   async explodeSelected() {
     const id = store().selectedFeatureId;
     if (id) await this.gm.edit.explode(id);
+  }
+
+  /** Simplify the selected line/polygon (whole-feature, conservative tolerance),
+   *  then persist + re-render. Points are unchanged. */
+  async simplifySelected() {
+    const id = store().selectedFeatureId;
+    if (!id) return;
+    const row = store().features[id];
+    if (!row) return;
+    const dto = await api.updateFeature(id, { geojson: simplifyFeature(row.geojson) });
+    store().upsertFeature(dto);
+    this.gm.dataLayers.setData(row.layerId, geoJsonFor(row.layerId));
+    store().setSelectedFeature(id);
   }
 
   async deleteSelected() {

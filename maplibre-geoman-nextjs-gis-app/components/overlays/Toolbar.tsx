@@ -133,7 +133,14 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
         hint: 'Explode — split the selected multipolygon into separate parts',
         run: (_gm, controller) => controller.explodeSelected(),
       },
-      edit('line_simplification', 'simplify', 'Simplify', false, 'Simplify — click two vertices on a line'),
+      {
+        id: 'simplify',
+        icon: 'simplify',
+        title: 'Simplify',
+        needsSelection: true,
+        hint: 'Simplify — reduce redundant vertices of the selected line or polygon',
+        run: (_gm, controller) => controller.simplifySelected(),
+      },
     ],
   },
   {
