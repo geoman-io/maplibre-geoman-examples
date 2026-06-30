@@ -243,17 +243,19 @@ export class EditorController {
     if (id) await this.gm.edit.explode(id);
   }
 
-  /** Simplify the selected line/polygon (whole-feature, conservative tolerance),
-   *  then persist + re-render. Points are unchanged. */
+  /** Simplify the selected line/polygon (whole-feature, conservative tolerance).
+   *  Routed through the engine's `updateGeometry` so it's a first-class,
+   *  undoable edit (records history + re-renders); then persisted. Points are
+   *  unchanged. */
   async simplifySelected() {
     const id = store().selectedFeatureId;
     if (!id) return;
+    const fd = findFeature(this.gm, id);
     const row = store().features[id];
-    if (!row) return;
-    const dto = await api.updateFeature(id, { geojson: simplifyFeature(row.geojson) });
+    if (!fd || !row) return;
+    await fd.updateGeometry(simplifyFeature(row.geojson).geometry as never);
+    const dto = await api.updateFeature(id, { geojson: readFeatureData(fd).geojson });
     store().upsertFeature(dto);
-    this.gm.dataLayers.setData(row.layerId, geoJsonFor(row.layerId));
-    store().setSelectedFeature(id);
   }
 
   async deleteSelected() {
