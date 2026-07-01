@@ -1,0 +1,118 @@
+'use client';
+
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import type { FeatureDTO, LayerDTO } from '@/lib/types';
+
+type EditorState = {
+  /** True once the project has been loaded into Geoman. */
+  hydrated: boolean;
+  layers: LayerDTO[];
+  /** Every feature in the project, keyed by id — the client source of truth. */
+  features: Record<string, FeatureDTO>;
+  activeLayerId: string | null;
+  selectedFeatureId: string | null;
+  /** The active map tool — single source of truth for both the toolbar
+   *  highlight (`key`) and the status bar (`title`). Null = no tool. */
+  activeTool: { key: string; title: string } | null;
+  /** Undo/redo availability, mirrored from Geoman's `gm:history` event. */
+  canUndo: boolean;
+  canRedo: boolean;
+  /** Geometry of the last copied feature (Ctrl+C), for paste (Ctrl+V). */
+  clipboard: unknown | null;
+  /** Transient message for the corner toast (e.g. a geofencing block). */
+  notice: string | null;
+
+  setHydrated: (v: boolean) => void;
+  setNotice: (notice: string | null) => void;
+  setActiveTool: (tool: { key: string; title: string } | null) => void;
+  setHistory: (canUndo: boolean, canRedo: boolean) => void;
+  setClipboard: (geojson: unknown | null) => void;
+  setLayers: (layers: LayerDTO[]) => void;
+  upsertLayer: (layer: LayerDTO) => void;
+  removeLayer: (id: string) => void;
+  setActiveLayer: (id: string | null) => void;
+
+  setFeatures: (features: FeatureDTO[]) => void;
+  upsertFeature: (feature: FeatureDTO) => void;
+  removeFeature: (id: string) => void;
+
+  setSelectedFeature: (id: string | null) => void;
+};
+
+// SSR-safe storage: localStorage only exists in the browser.
+const storage = createJSONStorage<{ layers: LayerDTO[]; features: Record<string, FeatureDTO> }>(
+  () =>
+    typeof window !== 'undefined'
+      ? window.localStorage
+      : { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+);
+
+export const useEditorStore = create<EditorState>()(
+  persist(
+    (set) => ({
+      hydrated: false,
+      layers: [],
+      features: {},
+      activeLayerId: null,
+      selectedFeatureId: null,
+      activeTool: null,
+      canUndo: false,
+      canRedo: false,
+      clipboard: null,
+      notice: null,
+
+      setHydrated: (hydrated) => set({ hydrated }),
+      setNotice: (notice) => set({ notice }),
+      setActiveTool: (activeTool) => set({ activeTool }),
+      setHistory: (canUndo, canRedo) => set({ canUndo, canRedo }),
+      setClipboard: (clipboard) => set({ clipboard }),
+      setLayers: (layers) => set({ layers }),
+      upsertLayer: (layer) =>
+        set((s) => {
+          const exists = s.layers.some((l) => l.id === layer.id);
+          return {
+            layers: exists
+              ? s.layers.map((l) => (l.id === layer.id ? layer : l))
+              : [...s.layers, layer],
+          };
+        }),
+      removeLayer: (id) =>
+        set((s) => {
+          const features = { ...s.features };
+          for (const fid of Object.keys(features)) {
+            if (features[fid].layerId === id) delete features[fid];
+          }
+          return {
+            layers: s.layers.filter((l) => l.id !== id),
+            features,
+            activeLayerId: s.activeLayerId === id ? null : s.activeLayerId,
+          };
+        }),
+      setActiveLayer: (activeLayerId) => set({ activeLayerId }),
+
+      setFeatures: (list) =>
+        set({ features: Object.fromEntries(list.map((f) => [f.id, f])) }),
+      upsertFeature: (feature) =>
+        set((s) => ({ features: { ...s.features, [feature.id]: feature } })),
+      removeFeature: (id) =>
+        set((s) => {
+          const features = { ...s.features };
+          delete features[id];
+          return {
+            features,
+            selectedFeatureId:
+              s.selectedFeatureId === id ? null : s.selectedFeatureId,
+          };
+        }),
+
+      setSelectedFeature: (selectedFeatureId) => set({ selectedFeatureId }),
+    }),
+    {
+      name: 'sunplan-project',
+      storage,
+      // Persist only the project data; UI/session flags stay ephemeral.
+      partialize: (s) => ({ layers: s.layers, features: s.features }),
+    },
+  ),
+);
