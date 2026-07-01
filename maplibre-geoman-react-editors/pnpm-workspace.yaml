@@ -1,0 +1,10 @@
+# Standalone workspace root (kept out of the parent examples workspace so the
+# private @geoman-io registry stays scoped here).
+allowBuilds:
+  esbuild: true
+
+# Every @geoman-io/* package is our own private build — exempt the whole scope
+# past pnpm's supply-chain minimumReleaseAge, so fast-moving Pro alphas install
+# immediately with no per-version re-pinning.
+minimumReleaseAgeExclude:
+  - '@geoman-io/*'
