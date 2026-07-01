@@ -6,6 +6,7 @@ import type {
   Geoman,
   StyleValue,
 } from '@geoman-io/maplibre-geoman-pro';
+import { geometryToWkt } from '@geoman-io/maplibre-geoman-pro';
 import type maplibregl from 'maplibre-gl';
 import type { Feature } from 'geojson';
 import type { FeatureCollection } from 'geojson';
@@ -37,6 +38,12 @@ const geoJsonFor = (layerId: string) => {
     .filter((r) => matchesFilter(r.metadata, layer?.style?.filter, schema))
     .map((r) => toGeoJson(r, schema));
 };
+
+/** Grid cell size for snap-to-grid, in degrees (~55 m of longitude at the equator). */
+const GRID_SIZE = 0.0005;
+
+/** Distance (metres) the buffer tool grows the selected polygon. */
+const BUFFER_METERS = 25;
 
 const SOURCE_PREFIX = 'gm_dl_';
 const layerIdFromSource = (sourceId: string) =>
@@ -254,6 +261,47 @@ export class EditorController {
     const row = store().features[id];
     if (!row) return;
     await this.gm.edit.setGeometry(id, simplifyFeature(row.geojson).geometry as never);
+  }
+
+  /** Repair the selected feature's geometry (de-dupe vertices, split a
+   *  self-intersecting polygon into valid parts). Routed through the host-facing
+   *  `gm.edit.repairGeometry` façade: one undoable edit that fires `gm:editend`
+   *  (persisted by `onUpdate`); a no-op when the geometry is already valid. */
+  async repairSelectedGeometry() {
+    const id = store().selectedFeatureId;
+    if (!id) return;
+    await this.gm.edit.repairGeometry(id);
+  }
+
+  /** Snap the selected feature's vertices to the grid (`gm.edit.snapToGrid`):
+   *  one undoable edit that fires `gm:editend` (persisted by `onUpdate`); a
+   *  no-op when the geometry is already on the grid. */
+  async snapSelectedToGrid() {
+    const id = store().selectedFeatureId;
+    if (!id) return;
+    await this.gm.edit.snapToGrid(id, GRID_SIZE);
+  }
+
+  /** Grow the selected polygon by `BUFFER_METERS` (`gm.edit.buffer`): one
+   *  undoable edit that fires `gm:editend` (persisted by `onUpdate`). Rejected
+   *  (no-op here) for non-polygon features. */
+  async bufferSelected() {
+    const id = store().selectedFeatureId;
+    if (!id) return;
+    await this.gm.edit.buffer(id, BUFFER_METERS);
+  }
+
+  /** Copy the selected feature's geometry to the clipboard as WKT
+   *  (`geometryToWkt`) — e.g. to paste into PostGIS/QGIS. Returns the WKT (or
+   *  null if nothing selected) so the caller can surface feedback. */
+  async copySelectedAsWkt(): Promise<string | null> {
+    const id = store().selectedFeatureId;
+    if (!id) return null;
+    const fd = this.gm.features.findEditableFeature(id);
+    if (!fd) return null;
+    const wkt = geometryToWkt(fd.getGeoJson().geometry);
+    await navigator.clipboard?.writeText(wkt);
+    return wkt;
   }
 
   async deleteSelected() {
@@ -525,9 +573,16 @@ export class EditorController {
       settings.bodyDragEnabled = config.bodyDrag;
     }
     // Engine-wide settings (read live by the snapping helper / create-update gates).
-    const top = this.gm.options.settings as { snapDistance?: number; validateSchema?: boolean };
+    const top = this.gm.options.settings as {
+      snapDistance?: number;
+      validateSchema?: boolean;
+      validateGeometry?: boolean;
+      gridSnap?: { size: number } | null;
+    };
     top.snapDistance = config.snapTolerance;
     top.validateSchema = config.validateSchema;
+    top.validateGeometry = config.validateGeometry;
+    top.gridSnap = config.gridSnap ? { size: GRID_SIZE } : null;
 
     this.setHoverCursor(config.hoverCursor);
     this.setCrossLayerSelect(config.crossLayerSelect);

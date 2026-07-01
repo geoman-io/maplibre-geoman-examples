@@ -24,11 +24,15 @@ export type Config = {
   topology: boolean;
   /** Trace new lines/polygons along existing feature edges while drawing. */
   tracing: boolean;
+  /** Snap drawn vertices to a fixed grid (Geoman `gridSnap`). */
+  gridSnap: boolean;
   /** Snap activation distance in pixels (Geoman `snapDistance`). */
   snapTolerance: number;
   // --- Validation ---
   /** Reject a create/edit whose attributes violate the layer's schema. */
   validateSchema: boolean;
+  /** Reject a create/edit whose geometry is invalid (self-intersection, etc.). */
+  validateGeometry: boolean;
 };
 
 export const DEFAULT_CONFIG: Config = {
@@ -40,8 +44,10 @@ export const DEFAULT_CONFIG: Config = {
   measurements: false,
   topology: false,
   tracing: false,
+  gridSnap: false,
   snapTolerance: 18,
   validateSchema: false,
+  validateGeometry: false,
 };
 
 /** The boolean (toggle) config keys — everything except the numeric slider. */
@@ -80,17 +86,25 @@ export const CONFIG_LABELS: Record<ToggleKey, { label: string; hint: string }> =
     label: 'Tracing',
     hint: 'While drawing, follow the edges of existing features.',
   },
+  gridSnap: {
+    label: 'Snap to grid',
+    hint: 'Round drawn/edited vertices to a fixed grid for precise placement.',
+  },
   validateSchema: {
     label: 'Enforce attribute schema',
     hint: 'Reject a create or edit whose attributes violate the layer’s schema.',
+  },
+  validateGeometry: {
+    label: 'Enforce geometry validity',
+    hint: 'Reject a create or edit that produces invalid geometry (e.g. a self-intersecting polygon).',
   },
 };
 
 /** Settings-modal layout: grouped sections of toggle keys. */
 export const CONFIG_SECTIONS: Array<{ title: string; keys: Array<ToggleKey> }> = [
   { title: 'Editing', keys: ['crossLayerSelect', 'hoverCursor', 'editSelectedOnly', 'bodyDrag'] },
-  { title: 'Helpers', keys: ['snapping', 'measurements', 'topology', 'tracing'] },
-  { title: 'Validation', keys: ['validateSchema'] },
+  { title: 'Helpers', keys: ['snapping', 'measurements', 'topology', 'tracing', 'gridSnap'] },
+  { title: 'Validation', keys: ['validateSchema', 'validateGeometry'] },
 ];
 
 type ConfigStore = Config & { set: (patch: Partial<Config>) => void };

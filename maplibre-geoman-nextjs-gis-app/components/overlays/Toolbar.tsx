@@ -141,6 +141,40 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
         hint: 'Simplify — reduce redundant vertices of the selected line or polygon',
         run: (_gm, controller) => controller.simplifySelected(),
       },
+      {
+        id: 'repair',
+        icon: 'simplify',
+        title: 'Repair',
+        needsSelection: true,
+        hint: 'Repair — fix invalid geometry (de-dupe vertices, split a self-intersecting polygon)',
+        run: (_gm, controller) => controller.repairSelectedGeometry(),
+      },
+      {
+        id: 'snap-grid',
+        icon: 'simplify',
+        title: 'Snap grid',
+        needsSelection: true,
+        hint: 'Snap to grid — round the selected feature’s vertices to a fixed grid',
+        run: (_gm, controller) => controller.snapSelectedToGrid(),
+      },
+      {
+        id: 'buffer',
+        icon: 'simplify',
+        title: 'Buffer',
+        needsSelection: true,
+        hint: 'Buffer — grow the selected polygon by a fixed distance',
+        run: (_gm, controller) => controller.bufferSelected(),
+      },
+      {
+        id: 'copy-wkt',
+        icon: 'simplify',
+        title: 'Copy WKT',
+        needsSelection: true,
+        hint: 'Copy WKT — copy the selected feature’s geometry to the clipboard as Well-Known Text',
+        run: (_gm, controller) => {
+          void controller.copySelectedAsWkt();
+        },
+      },
     ],
   },
   {

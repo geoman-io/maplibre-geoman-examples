@@ -25,9 +25,10 @@ function buildGmOptions(): NonNullable<ConstructorParameters<typeof Geoman>[1]> 
       // Globally-unique feature ids so they never collide across layers/reloads
       // (features are keyed by id in the DB with a (userId, id) primary key).
       idGenerator: () => crypto.randomUUID(),
-      // Snap distance + schema enforcement come from the persisted config.
+      // Snap distance + schema/geometry enforcement come from the persisted config.
       snapDistance: c.snapTolerance,
       validateSchema: c.validateSchema,
+      validateGeometry: c.validateGeometry,
     },
     controls: {
       // QGIS node tool: vertex markers only for the selected feature; a body
