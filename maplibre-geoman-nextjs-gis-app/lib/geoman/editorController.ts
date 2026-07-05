@@ -430,6 +430,15 @@ export class EditorController {
 
   async toggleVisibility(layer: LayerDTO) {
     const next = !layer.visible;
+    // Hiding a layer whose feature is selected must deselect it — otherwise the
+    // selection outline / vertex markers linger on the now-invisible feature.
+    if (!next) {
+      const selId = store().selectedFeatureId;
+      if (selId && store().features[selId]?.layerId === layer.id) {
+        this.gm.features.setSelection([]);
+        store().setSelectedFeature(null);
+      }
+    }
     store().upsertLayer({ ...layer, visible: next });
     this.gm.dataLayers.setVisibility(layer.id, next);
     await api.updateLayer(layer.id, { visible: next });

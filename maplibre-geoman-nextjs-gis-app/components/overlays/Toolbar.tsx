@@ -48,6 +48,10 @@ const I: Record<string, ReactNode> = {
   merge_parts: S(<><rect x="3" y="8" width="8" height="8" rx="1" /><rect x="13" y="8" width="8" height="8" rx="1" /><path d="M11 12h2" /></>),
   explode: S(<><rect x="9" y="9" width="6" height="6" rx="1" /><path d="M11 3 4 10M13 3l7 7M11 21l-7-7M13 21l7-7" /></>),
   simplify: S(<path d="M3 17c4 0 4-8 8-8s2 5 5 5 3-4 5-4" />),
+  repair: S(<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2-2 2.1-2.1Z" />),
+  snap_grid: S(<path d="M3 9h18M3 15h18M9 3v18M15 3v18" />),
+  buffer: S(<><rect x="8" y="8" width="8" height="8" rx="1" /><rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="2 2" /></>),
+  wkt: S(<><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M8 10l-2 2 2 2M16 10l2 2-2 2" /></>),
   copy: S(<><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>),
   cut: S(<><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12" /></>),
   select: S(<path d="m3 3 7.5 18 2.5-7.5L20.5 11 3 3Z" />),
@@ -143,7 +147,7 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
       },
       {
         id: 'repair',
-        icon: 'simplify',
+        icon: 'repair',
         title: 'Repair',
         needsSelection: true,
         hint: 'Repair — fix invalid geometry (de-dupe vertices, split a self-intersecting polygon)',
@@ -151,7 +155,7 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
       },
       {
         id: 'snap-grid',
-        icon: 'simplify',
+        icon: 'snap_grid',
         title: 'Snap grid',
         needsSelection: true,
         hint: 'Snap to grid — round the selected feature’s vertices to a fixed grid',
@@ -159,7 +163,7 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
       },
       {
         id: 'buffer',
-        icon: 'simplify',
+        icon: 'buffer',
         title: 'Buffer',
         needsSelection: true,
         hint: 'Buffer — grow the selected polygon by a fixed distance',
@@ -167,7 +171,7 @@ const GROUPS: Array<{ name: string; tools: Tool[] }> = [
       },
       {
         id: 'copy-wkt',
-        icon: 'simplify',
+        icon: 'wkt',
         title: 'Copy WKT',
         needsSelection: true,
         hint: 'Copy WKT — copy the selected feature’s geometry to the clipboard as Well-Known Text',
@@ -253,28 +257,35 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
     <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] items-center gap-0.5 overflow-x-auto rounded-xl bg-white/95 p-1.5 shadow-lg ring-1 ring-black/5 backdrop-blur">
       {tbtn('undo', 'undo', 'Undo (⌘Z)', () => void controller.undo(), { disabled: !canUndo })}
       {tbtn('redo', 'redo', 'Redo (⇧⌘Z)', () => void controller.redo(), { disabled: !canRedo })}
-      {sep('sep-history')}
-      {GROUPS.map((g, gi) => (
-        <div key={g.name} className="flex items-center gap-0.5">
-          {gi > 0 && sep(`sep-${g.name}`)}
-          {(g.name === 'Digitize' && activeGeom
-            ? g.tools.filter((t) => SHAPE_KIND[t.id] === activeGeom)
-            : g.tools
-          ).map((t) =>
-            tbtn(
-              t.id,
-              t.icon,
-              hasActiveLayer ? t.title : `${t.title} — add a layer first`,
-              () => select(t.id, () => t.run(gm, controller)),
-              {
-                on: activeTool?.key === t.id,
-                disabled: !hasActiveLayer || (t.needsSelection && !hasSelection),
-                tooltip: t.hint,
-              },
-            ),
-          )}
-        </div>
-      ))}
+      {GROUPS.map((g) => {
+        // Draw tools are filtered to the active layer's geometry; selection-only
+        // actions (explode/simplify/repair/…) are HIDDEN until a feature is
+        // selected — so the resting toolbar stays short and only shows those
+        // tools in the context where they apply. Empty groups drop out entirely.
+        const visible = (g.name === 'Digitize' && activeGeom
+          ? g.tools.filter((t) => SHAPE_KIND[t.id] === activeGeom)
+          : g.tools
+        ).filter((t) => hasSelection || !t.needsSelection);
+        if (!visible.length) return null;
+        return (
+          <div key={g.name} className="flex items-center gap-0.5">
+            {sep(`sep-${g.name}`)}
+            {visible.map((t) =>
+              tbtn(
+                t.id,
+                t.icon,
+                hasActiveLayer ? t.title : `${t.title} — add a layer first`,
+                () => select(t.id, () => t.run(gm, controller)),
+                {
+                  on: activeTool?.key === t.id,
+                  disabled: !hasActiveLayer,
+                  tooltip: t.hint,
+                },
+              ),
+            )}
+          </div>
+        );
+      })}
       {sep('sep-helpers')}
       {tbtn('zoom', 'zoom', 'Zoom to features', () => controller.zoomToAll())}
     </div>
