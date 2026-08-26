@@ -30,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ gmEvents }) => {
           {item.type === 'gm:globaldrawmodetoggled' && (
             <>
               <div>Shape: {item.shape}</div>
-              <div>Enabled: {item.enabled}</div>
+              <div>Enabled: {item.enabled ? 'Yes' : 'No'}</div>
             </>
           )}
 
@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ gmEvents }) => {
             'gm:globaldragmodetoggled',
             'gm:globalrotatemodetoggled',
           ].includes(item.type) && (
-            <div>Enabled: {item.enabled}</div>
+              <div>Enabled: {item.enabled ? 'Yes' : 'No'}</div>
           )}
 
           {item.type === 'gm:create' && (
