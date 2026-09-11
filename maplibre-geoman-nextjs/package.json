@@ -7,7 +7,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "prebuild": "node scripts/copy-maplibre-worker.mjs",
+    "predev": "node scripts/copy-maplibre-worker.mjs",
+    "prestart": "node scripts/copy-maplibre-worker.mjs"
   },
   "dependencies": {
     "@geoman-io/maplibre-geoman-free": "catalog:",

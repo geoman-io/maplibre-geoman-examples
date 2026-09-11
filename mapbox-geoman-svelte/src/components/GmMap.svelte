@@ -71,7 +71,7 @@
     // Mode events
     map.on('gm:globaldrawmodetoggled', (event) => handleEvent(event));
     map.on('gm:globaleditmodetoggled', (event) => handleEvent(event));
-    map.on('gm:globalremovemodetoggled', (event) => handleEvent(event));
+    map.on('gm:globaldeletemodetoggled', (event) => handleEvent(event));
     map.on('gm:globalrotatemodetoggled', (event) => handleEvent(event));
     map.on('gm:globaldragmodetoggled', (event) => handleEvent(event));
     map.on('gm:globalcutmodetoggled', (event) => handleEvent(event));

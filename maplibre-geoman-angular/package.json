@@ -5,7 +5,9 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "test": "ng test"
+    "test": "ng test",
+    "prebuild": "node scripts/copy-maplibre-worker.mjs",
+    "prestart": "node scripts/copy-maplibre-worker.mjs"
   },
   "private": true,
   "packageManager": "pnpm@11.7.0",
@@ -20,7 +22,6 @@
     "@angular/router": "catalog:",
     "@geoman-io/maplibre-geoman-free": "catalog:",
     "maplibre-gl": "catalog:",
-    "@maplibre/maplibre-gl-style-spec": "catalog:",
     "lodash": "catalog:",
     "normalize.css": "catalog:",
     "rxjs": "catalog:",

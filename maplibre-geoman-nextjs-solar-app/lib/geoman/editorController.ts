@@ -6,7 +6,7 @@ import type {
   Geoman,
   StyleValue,
 } from '@geoman-io/maplibre-geoman-pro';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import type { Feature, FeatureCollection } from 'geojson';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import { useArrayConfig } from '@/hooks/useArrayConfig';
@@ -200,7 +200,7 @@ export class EditorController {
   private wireEvents() {
     const map = this.gm.mapAdapter.getMapInstance() as unknown as maplibregl.Map;
 
-    map.on('gm:create', (e: { feature: FeatureData; shape?: string }) => {
+    this.gm.mapAdapter.on('gm:create', (e: { feature: FeatureData; shape?: string }) => {
       const layerId = layerIdFromSource(e.feature.source.id) ?? store().activeLayerId;
       if (!layerId) return;
       const read = readFeatureData(e.feature);
@@ -229,22 +229,24 @@ export class EditorController {
       }
     };
     for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) {
-      map.on(ev, onUpdate);
+      this.gm.mapAdapter.on(ev, onUpdate);
     }
 
-    map.on('gm:remove', (e: { feature: FeatureData }) => {
+    this.gm.mapAdapter.on('gm:remove', (e: { feature: FeatureData }) => {
       const id = String(e.feature.id);
       if (store().features[id]) store().removeFeature(id);
       this.syncGeofencing(); // a removed roof plane leaves the containment set
     });
 
-    map.on('gm:selection', (e: { selection: Array<string | number> }) => {
+    this.gm.mapAdapter.on('gm:selection', (e: { selection: Array<string | number> }) => {
       const id = e.selection[0];
       store().setSelectedFeature(id != null ? String(id) : null);
     });
 
-    map.on('gm:history', (e: { canUndo: boolean; canRedo: boolean }) => {
-      store().setHistory(e.canUndo, e.canRedo);
+    this.gm.mapAdapter.on('gm:history', (e) => {
+      if ('canUndo' in e && typeof e.canUndo === 'boolean' && 'canRedo' in e && typeof e.canRedo === 'boolean') {
+        store().setHistory(e.canUndo, e.canRedo);
+      }
     });
   }
 
@@ -648,7 +650,7 @@ export class EditorController {
     await this.syncGeofencing();
     if (this.geofencingWired) return;
     this.geofencingWired = true;
-    this.map().on('gm:geofencing_violation', () => {
+    this.gm.mapAdapter.on('gm:geofencing_violation', () => {
       store().setNotice('Keep it on a roof plane — blocked by geofencing.');
     });
   }

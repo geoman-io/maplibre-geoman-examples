@@ -1,6 +1,7 @@
 import { FunctionalComponent } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
-import ml from 'maplibre-gl';
+import * as ml from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { Geoman } from '@geoman-io/maplibre-geoman-free';
 import '@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -31,6 +32,7 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
 
   useEffect(() => {
     if (mapRef.current) {
+      ml.setWorkerUrl(maplibreWorkerUrl);
       const map = new ml.Map({
         container: mapRef.current,
         style: mapStyle,
@@ -56,7 +58,7 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
         console.log('Shapes loaded', demoFeatures);
       };
 
-      map.on('gm:loaded', () => {
+      geoman.mapAdapter.on('gm:loaded', () => {
         console.log('Geoman loaded', geoman);
         loadDevShapes();
 
@@ -72,30 +74,28 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
       };
 
       // Register event listeners
-      map.on('gm:globaldrawmodetoggled', eventHandler);
-      map.on('gm:globaleditmodetoggled', eventHandler);
-      map.on('gm:globalremovemodetoggled', eventHandler);
-      map.on('gm:globalrotatemodetoggled', eventHandler);
-      map.on('gm:globaldragmodetoggled', eventHandler);
-      map.on('gm:globalcutmodetoggled', eventHandler);
-      map.on('gm:globalsnappingmodetoggled', eventHandler);
+      geoman.mapAdapter.on('gm:globaldrawmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globaldrawmodetoggled' }));
+      geoman.mapAdapter.on('gm:globaleditmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globaleditmodetoggled' }));
+      geoman.mapAdapter.on('gm:globaldeletemodetoggled', (event) => eventHandler({ ...event, type: 'gm:globaldeletemodetoggled' }));
+      geoman.mapAdapter.on('gm:globalrotatemodetoggled', (event) => eventHandler({ ...event, type: 'gm:globalrotatemodetoggled' }));
+      geoman.mapAdapter.on('gm:globaldragmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globaldragmodetoggled' }));
+      geoman.mapAdapter.on('gm:globalcutmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globalcutmodetoggled' }));
+      geoman.mapAdapter.on('gm:globalsnappingmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globalsnappingmodetoggled' }));
 
-      map.on('gm:create', eventHandler);
-      map.on('gm:editstart', eventHandler);
-      map.on('gm:editend', eventHandler);
+      geoman.mapAdapter.on('gm:create', (event) => eventHandler({ ...event, type: 'gm:create' }));
+      geoman.mapAdapter.on('gm:editstart', (event) => eventHandler({ ...event, type: 'gm:editstart' }));
+      geoman.mapAdapter.on('gm:editend', (event) => eventHandler({ ...event, type: 'gm:editend' }));
 
-      map.on('gm:remove', eventHandler);
+      geoman.mapAdapter.on('gm:remove', (event) => eventHandler({ ...event, type: 'gm:remove' }));
 
-      map.on('gm:rotatestart', eventHandler);
-      map.on('gm:rotateend', eventHandler);
+      geoman.mapAdapter.on('gm:rotatestart', (event) => eventHandler({ ...event, type: 'gm:rotatestart' }));
+      geoman.mapAdapter.on('gm:rotateend', (event) => eventHandler({ ...event, type: 'gm:rotateend' }));
 
-      map.on('gm:dragstart', eventHandler);
-      map.on('gm:dragend', eventHandler);
+      geoman.mapAdapter.on('gm:dragstart', (event) => eventHandler({ ...event, type: 'gm:dragstart' }));
+      geoman.mapAdapter.on('gm:dragend', (event) => eventHandler({ ...event, type: 'gm:dragend' }));
 
-      map.on('gm:cut', eventHandler);
+      geoman.mapAdapter.on('gm:cut', (event) => eventHandler({ ...event, type: 'gm:cut' }));
 
-      map.on('gm:helper', eventHandler);
-      map.on('gm:control', eventHandler);
 
       // Cleanup on unmount
       return () => {

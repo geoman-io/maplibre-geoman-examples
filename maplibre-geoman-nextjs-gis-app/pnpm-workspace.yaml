@@ -1,3 +1,5 @@
+minimumReleaseAge: 10080
+
 # Standalone workspace root for the Pro GIS demo (kept out of the parent
 # examples workspace so the private @geoman-io registry stays scoped here).
 # sharp / unrs-resolver ship prebuilt binaries; approving their build scripts
@@ -7,9 +9,9 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 
-# Vercel enforces a pnpm supply-chain `minimumReleaseAge` (~24h) — a freshly
+# Vercel enforces a pnpm supply-chain `minimumReleaseAge` (seven days) — a freshly
 # published package fails the install. Every @geoman-io/* package is our own
-# private build, so exempt the whole scope: fast-moving Pro alphas install
+# private build, so exempt the whole scope: fast-moving Pro releases install
 # immediately with no per-version re-pinning. (pnpm reads this from
 # pnpm-workspace.yaml, NOT .npmrc, in pnpm 11.)
 minimumReleaseAgeExclude:

@@ -67,3 +67,11 @@ If you have examples that you want to share about your usage of Geoman, please f
 | maplibre-geoman-preact | [Demo](https://maplibre-geoman-preact.vercel.app) | [Code](https://github.com/geoman-io/maplibre-geoman-examples/tree/master/maplibre-geoman-preact) | Lightweight Preact alternative to the React implementation      |
 | maplibre-geoman-nextjs | [Demo](https://maplibre-geoman-nextjs.vercel.app) | [Code](https://github.com/geoman-io/maplibre-geoman-examples/tree/master/maplibre-geoman-nextjs) | Next.js integration with server-side rendering support          |
 | maplibre-geoman-svelte | [Demo](https://maplibre-geoman-svelte.vercel.app) | [Code](https://github.com/geoman-io/maplibre-geoman-examples/tree/master/maplibre-geoman-svelte) | Svelte implementation offering reactive map editing features    |
+
+## September 2026 release update
+
+The three standalone Pro demos use Geoman Pro **0.11.0**. The eight framework
+examples retain their Free packages, updated to **0.9.2**. All MapLibre apps
+use GL JS **6.7.0** and ESM imports. Vite bundles the module worker; Next.js
+and Angular copy the worker and shared module to public assets before builds
+and development. Third-party dependencies keep a seven-day cooldown.

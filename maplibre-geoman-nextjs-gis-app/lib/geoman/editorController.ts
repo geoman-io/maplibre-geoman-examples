@@ -7,7 +7,7 @@ import type {
   StyleValue,
 } from '@geoman-io/maplibre-geoman-pro';
 import { geometryToWkt } from '@geoman-io/maplibre-geoman-pro';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import type { Feature } from 'geojson';
 import type { FeatureCollection } from 'geojson';
 import { useEditorStore } from '@/hooks/useEditorStore';
@@ -150,7 +150,7 @@ export class EditorController {
   private wireEvents() {
     const map = this.gm.mapAdapter.getMapInstance() as unknown as maplibregl.Map;
 
-    map.on('gm:create', async (e: { feature: FeatureData; shape?: string }) => {
+    this.gm.mapAdapter.on('gm:create', async (e: { feature: FeatureData; shape?: string }) => {
       const layerId = layerIdFromSource(e.feature.source.id) ?? store().activeLayerId;
       if (!layerId) return;
       // Read straight from the feature — do NOT mutate it here (updateProperties
@@ -180,23 +180,25 @@ export class EditorController {
       }
     };
     for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) {
-      map.on(ev, onUpdate);
+      this.gm.mapAdapter.on(ev, onUpdate);
     }
 
-    map.on('gm:remove', async (e: { feature: FeatureData }) => {
+    this.gm.mapAdapter.on('gm:remove', async (e: { feature: FeatureData }) => {
       const id = String(e.feature.id);
       if (!store().features[id]) return;
       store().removeFeature(id);
       await api.deleteFeature(id).catch(() => {});
     });
 
-    map.on('gm:selection', (e: { selection: Array<string | number> }) => {
+    this.gm.mapAdapter.on('gm:selection', (e: { selection: Array<string | number> }) => {
       const id = e.selection[0];
       store().setSelectedFeature(id != null ? String(id) : null);
     });
 
-    map.on('gm:history', (e: { canUndo: boolean; canRedo: boolean }) => {
-      store().setHistory(e.canUndo, e.canRedo);
+    this.gm.mapAdapter.on('gm:history', (e) => {
+      if ('canUndo' in e && typeof e.canUndo === 'boolean' && 'canRedo' in e && typeof e.canRedo === 'boolean') {
+        store().setHistory(e.canUndo, e.canRedo);
+      }
     });
   }
 

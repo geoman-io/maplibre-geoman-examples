@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { Geoman } from '@geoman-io/maplibre-geoman-pro';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@geoman-io/maplibre-geoman-pro/dist/maplibre-geoman.css';
@@ -58,6 +58,8 @@ export default function GisMap({ onReady }: GisMapProps) {
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    maplibregl.setWorkerUrl('/vendor/maplibre/maplibre-gl-worker.mjs');
+
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: mapStyle,
@@ -72,7 +74,7 @@ export default function GisMap({ onReady }: GisMapProps) {
     const gm = new Geoman(map, buildGmOptions());
     gmRef.current = gm;
 
-    map.on('gm:loaded', () => {
+    gm.mapAdapter.on('gm:loaded', () => {
       onReadyRef.current?.({ map, gm });
     });
 

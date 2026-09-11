@@ -3,7 +3,8 @@ import "./style.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css";
 
-import ml from "maplibre-gl";
+import * as ml from "maplibre-gl";
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import {
   GeoJsonImportFeature,
   Geoman,
@@ -38,6 +39,8 @@ const mapLibreStyle: ml.StyleSpecification = {
   ],
 };
 
+ml.setWorkerUrl(maplibreWorkerUrl);
+
 const map = new ml.Map({
   container: "dev-map",
   style: mapLibreStyle,
@@ -53,7 +56,7 @@ const gmOptions: GmOptionsPartial = {
 const geoman = new Geoman(map, gmOptions);
 
 // callback when geoman is fully loaded
-map.on("gm:loaded", () => {
+geoman.mapAdapter.on("gm:loaded", () => {
   console.log("Geoman fully loaded");
 
   // Here you can add your geojson shapes for example

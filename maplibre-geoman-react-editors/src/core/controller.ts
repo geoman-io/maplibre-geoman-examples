@@ -1,5 +1,5 @@
 import type { DataLayerStyle, FeatureData, Geoman, StyleValue } from '@geoman-io/maplibre-geoman-pro';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import type { Feature as GeoFeature, Geometry } from 'geojson';
 import { useEditorStore } from './store';
 import { clearProject, loadProject, saveProject } from '../storage';
@@ -151,7 +151,7 @@ export class EditorController {
   }
 
   private wireEvents() {
-    this.map.on('gm:create', (e: { feature: FeatureData; shape?: string }) => {
+    this.gm.mapAdapter.on('gm:create', (e: { feature: FeatureData; shape?: string }) => {
       const layerId = layerIdFromSource(e.feature.source.id) ?? store().activeLayerId;
       if (!layerId) return;
       const read = readFeatureData(e.feature);
@@ -169,20 +169,24 @@ export class EditorController {
       }
       this.persist();
     };
-    for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) this.map.on(ev, onUpdate);
+    for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) this.gm.mapAdapter.on(ev, onUpdate);
 
-    this.map.on('gm:remove', (e: { feature: FeatureData }) => {
+    this.gm.mapAdapter.on('gm:remove', (e: { feature: FeatureData }) => {
       const id = String(e.feature.id);
       if (store().features[id]) store().removeFeature(id);
       this.persist();
     });
 
-    this.map.on('gm:selection', (e: { selection: Array<string | number> }) => {
+    this.gm.mapAdapter.on('gm:selection', (e: { selection: Array<string | number> }) => {
       const id = e.selection[0];
       store().setSelectedFeature(id != null ? String(id) : null);
     });
 
-    this.map.on('gm:history', (e: { canUndo: boolean; canRedo: boolean }) => store().setHistory(e.canUndo, e.canRedo));
+    this.gm.mapAdapter.on('gm:history', (e) => {
+      if ('canUndo' in e && typeof e.canUndo === 'boolean' && 'canRedo' in e && typeof e.canRedo === 'boolean') {
+        store().setHistory(e.canUndo, e.canRedo);
+      }
+    });
   }
 
   // --- layers ------------------------------------------------------------

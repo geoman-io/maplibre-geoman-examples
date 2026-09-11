@@ -24,6 +24,7 @@ export class GeomanMapComponent implements OnInit {
     }
 
     // Create MapLibre map
+    ml.setWorkerUrl('/vendor/maplibre/maplibre-gl-worker.mjs');
     const map = new ml.Map({
       container: this.mapElement.nativeElement,
       style: mapStyle,
@@ -56,7 +57,7 @@ export class GeomanMapComponent implements OnInit {
     };
 
     // Wait for geoman ready
-    map.on('gm:loaded', () => {
+    geoman.mapAdapter.on('gm:loaded', () => {
       console.log('Geoman fully loaded');
       loadDevShapes();
 
@@ -65,37 +66,35 @@ export class GeomanMapComponent implements OnInit {
     });
 
     // Listen for all relevant Geoman events
-    map.on('gm:globaldrawmodetoggled', e => this.gmEvent.emit(e));
-    map.on('gm:globaleditmodetoggled', e => this.gmEvent.emit(e));
-    map.on('gm:globalremovemodetoggled', e => this.gmEvent.emit(e));
-    map.on('gm:globalrotatemodetoggled', e => this.gmEvent.emit(e));
-    map.on('gm:globaldragmodetoggled', e => this.gmEvent.emit(e));
-    map.on('gm:globalcutmodetoggled', e => this.gmEvent.emit(e));
-    map.on('gm:globalsnappingmodetoggled', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:globaldrawmodetoggled', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:globaleditmodetoggled', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:globaldeletemodetoggled', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:globalrotatemodetoggled', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:globaldragmodetoggled', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:globalcutmodetoggled', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:globalsnappingmodetoggled', e => this.gmEvent.emit(e));
 
     // Create events
-    map.on('gm:create', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:create', e => this.gmEvent.emit(e));
 
     // Edit events
-    map.on('gm:editstart', e => this.gmEvent.emit(e));
-    map.on('gm:editend', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:editstart', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:editend', e => this.gmEvent.emit(e));
 
     // Remove events
-    map.on('gm:remove', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:remove', e => this.gmEvent.emit(e));
 
     // Rotate events
-    map.on('gm:rotatestart', e => this.gmEvent.emit(e));
-    map.on('gm:rotateend', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:rotatestart', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:rotateend', e => this.gmEvent.emit(e));
 
     // Drag events
-    map.on('gm:dragstart', e => this.gmEvent.emit(e));
-    map.on('gm:dragend', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:dragstart', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:dragend', e => this.gmEvent.emit(e));
 
     // Cut events
-    map.on('gm:cut', e => this.gmEvent.emit(e));
+    geoman.mapAdapter.on('gm:cut', e => this.gmEvent.emit(e));
 
     // Helper & control
-    map.on('gm:helper', e => this.gmEvent.emit(e));
-    map.on('gm:control', e => this.gmEvent.emit(e));
   }
 }

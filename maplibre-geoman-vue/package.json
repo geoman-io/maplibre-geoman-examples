@@ -12,7 +12,6 @@
   "dependencies": {
     "@geoman-io/maplibre-geoman-free": "catalog:",
     "maplibre-gl": "catalog:",
-    "@maplibre/maplibre-gl-style-spec": "catalog:",
     "normalize.css": "catalog:",
     "vue": "catalog:"
   },
