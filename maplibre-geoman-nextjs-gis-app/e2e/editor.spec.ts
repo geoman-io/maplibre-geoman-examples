@@ -32,7 +32,7 @@ test('dev sign-in, create / hide / delete a layer', async ({ page }) => {
   await expect(page.getByLabel('Parcels fill')).toHaveCount(0);
 
   // Toolbar (custom controls) is present.
-  await expect(page.getByRole('button', { name: 'Polygon' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Polygon — add a layer first', exact: true })).toBeVisible();
 });
 
 test('multiple layers with active switching + fill/border swatches', async ({ page }) => {

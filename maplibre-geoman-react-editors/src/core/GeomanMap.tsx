@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { Geoman } from '@geoman-io/maplibre-geoman-pro';
 import { mapStyle } from '../mapStyle';
 
@@ -27,11 +28,12 @@ export default function GeomanMap({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    maplibregl.setWorkerUrl(maplibreWorkerUrl);
     const map = new maplibregl.Map({ container, style: mapStyle, center, zoom });
     const gm = new Geoman(map, {
       settings: { useControlsUi: false, idGenerator: () => crypto.randomUUID() },
     });
-    map.on('gm:loaded', () => onReadyRef.current(gm, map));
+    gm.mapAdapter.on('gm:loaded', () => onReadyRef.current(gm, map));
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(container);
     return () => {

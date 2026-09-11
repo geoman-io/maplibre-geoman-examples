@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Geoman } from '@geoman-io/maplibre-geoman-pro';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import GeomanMap from './GeomanMap';
 import Toolbar from './Toolbar';
 import { EditorController } from './controller';

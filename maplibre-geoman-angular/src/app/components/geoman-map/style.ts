@@ -1,4 +1,4 @@
-import { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
+import type { StyleSpecification } from 'maplibre-gl';
 
 const mapStyle: StyleSpecification = {
   version: 8,

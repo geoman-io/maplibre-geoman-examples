@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Geoman } from '@geoman-io/maplibre-geoman-pro';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { useEditorStore } from '@/hooks/useEditorStore';
 
 const getMap = (gm: Geoman) => gm.mapAdapter.getMapInstance() as unknown as maplibregl.Map;
