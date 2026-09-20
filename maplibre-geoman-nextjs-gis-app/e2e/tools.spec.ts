@@ -44,13 +44,15 @@ test('every toolbar tool activates without error', async ({ page }) => {
     await page.getByRole('button', { name, exact: true }).click();
   }
 
-  // Zoom remains on the toolbar; helper settings live in Editor settings.
+  // Helpers (toggles + action).
+  await page.getByRole('button', { name: 'Measure (length / area)' }).click();
+  await page.getByRole('button', { name: 'Snapping' }).click();
   await page.getByRole('button', { name: 'Zoom to features' }).click();
 
   // Selection-required geometry tools: select the feature first.
   await page.getByRole('button', { name: '▴ Attribute table' }).click();
   await page.locator('tbody tr').first().click();
-  for (const name of ['Simplify', 'Add part', 'Add hole', 'Remove ring', 'Merge parts']) {
+  for (const name of ['Add part', 'Add hole', 'Remove ring', 'Merge parts', 'Simplify', 'Repair', 'Snap grid', 'Buffer']) {
     await page.getByRole('button', { name, exact: true }).click();
   }
 

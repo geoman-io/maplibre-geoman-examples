@@ -2,7 +2,6 @@
   "name": "maplibre-geoman-nextjs-gis-app",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,17 +16,14 @@
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "relink": "pnpm --dir ../../maplibre-geoman-pro --filter @geoman-io/maplibre-geoman-pro build && rm -rf node_modules pnpm-lock.yaml .next && pnpm install",
-    "dev:fresh": "pnpm relink && pnpm dev",
-    "prebuild": "node scripts/copy-maplibre-worker.mjs",
-    "predev": "node scripts/copy-maplibre-worker.mjs",
-    "prestart": "node scripts/copy-maplibre-worker.mjs"
+    "dev:fresh": "pnpm relink && pnpm dev"
   },
   "dependencies": {
-    "@geoman-io/maplibre-geoman-pro": "0.11.0",
+    "@geoman-io/maplibre-geoman-pro": "0.12.0",
     "@turf/simplify": "^7.3.5",
     "better-auth": "^1.6.22",
     "drizzle-orm": "^0.45.2",
-    "maplibre-gl": "^6.7.0",
+    "maplibre-gl": "^6.2.0",
     "next": "16.2.9",
     "pg": "^8.22.0",
     "react": "19.2.7",
@@ -45,7 +41,7 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^10",
+    "eslint": "^9.39.4",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",

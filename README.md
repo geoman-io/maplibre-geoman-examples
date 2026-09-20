@@ -14,12 +14,9 @@ is a workspace package, sharing a single lockfile and a centralized dependency
 
 ### Requirements
 
-- **pnpm 11** — pinned via the root `package.json` `packageManager` field
-  (`pnpm@11.7.0`). With Corepack enabled (`corepack enable`) the correct version
-  is used automatically.
-- **Node.js ≥ 22.22.3** — required by Angular 22. The version is pinned in
-  `.tool-versions` (`nodejs 24.16.0`). Other apps run on Node 20.19+, but the
-  workspace floor is set by Angular.
+- **mise** — install and activate the versions declared in `mise.toml`
+  (`node 24.16.0` and `pnpm 11.9.0`). Corepack is not required.
+- **Node.js ≥ 22.22.3** — required by Angular 22. The workspace uses Node 24.16.0.
 
 ### Commands
 

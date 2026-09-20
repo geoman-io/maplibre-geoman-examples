@@ -180,7 +180,7 @@ export class EditorController {
       }
     };
     for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) {
-      this.gm.mapAdapter.on(ev, onUpdate);
+      map.on(ev as never, onUpdate);
     }
 
     this.gm.mapAdapter.on('gm:remove', async (e: { feature: FeatureData }) => {
@@ -196,7 +196,7 @@ export class EditorController {
     });
 
     this.gm.mapAdapter.on('gm:history', (e) => {
-      if ('canUndo' in e && typeof e.canUndo === 'boolean' && 'canRedo' in e && typeof e.canRedo === 'boolean') {
+      if ('canUndo' in e && 'canRedo' in e) {
         store().setHistory(e.canUndo, e.canRedo);
       }
     });

@@ -1,13 +1,17 @@
 import { FunctionalComponent } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import * as ml from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { Geoman } from '@geoman-io/maplibre-geoman-free';
 import '@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { demoFeatures } from '../fixtures/features.ts';
 import type { GmEvent } from '../types.ts';
 import mapStyle from './maplibre-style.ts';
+
+// MapLibre GL JS v6 no longer resolves its own web worker once bundled, so the app must
+// point it at one before creating a map. Vite serves the worker via the `?worker&url` query.
+ml.setWorkerUrl(workerUrl);
 
 
 interface GmMapProps {
@@ -32,7 +36,6 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
 
   useEffect(() => {
     if (mapRef.current) {
-      ml.setWorkerUrl(maplibreWorkerUrl);
       const map = new ml.Map({
         container: mapRef.current,
         style: mapStyle,
@@ -44,6 +47,10 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
       mapInstance.current = map;
       const geoman = new Geoman(map, gmOptions);
       geomanInstance.current = geoman;
+      const mapOn = geoman.mapAdapter.on.bind(geoman.mapAdapter) as unknown as (
+        eventName: string,
+        listener: (event: GmEvent) => void,
+      ) => void;
 
       const loadDevShapes = () => {
         if (!geomanInstance.current) {
@@ -58,7 +65,7 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
         console.log('Shapes loaded', demoFeatures);
       };
 
-      geoman.mapAdapter.on('gm:loaded', () => {
+      mapOn('gm:loaded', () => {
         console.log('Geoman loaded', geoman);
         loadDevShapes();
 
@@ -74,28 +81,30 @@ const GmMap: FunctionalComponent<GmMapProps> = ({ handleEvent }) => {
       };
 
       // Register event listeners
-      geoman.mapAdapter.on('gm:globaldrawmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globaldrawmodetoggled' }));
-      geoman.mapAdapter.on('gm:globaleditmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globaleditmodetoggled' }));
-      geoman.mapAdapter.on('gm:globaldeletemodetoggled', (event) => eventHandler({ ...event, type: 'gm:globaldeletemodetoggled' }));
-      geoman.mapAdapter.on('gm:globalrotatemodetoggled', (event) => eventHandler({ ...event, type: 'gm:globalrotatemodetoggled' }));
-      geoman.mapAdapter.on('gm:globaldragmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globaldragmodetoggled' }));
-      geoman.mapAdapter.on('gm:globalcutmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globalcutmodetoggled' }));
-      geoman.mapAdapter.on('gm:globalsnappingmodetoggled', (event) => eventHandler({ ...event, type: 'gm:globalsnappingmodetoggled' }));
+      mapOn('gm:globaldrawmodetoggled', eventHandler);
+      mapOn('gm:globaleditmodetoggled', eventHandler);
+      mapOn('gm:globalremovemodetoggled', eventHandler);
+      mapOn('gm:globalrotatemodetoggled', eventHandler);
+      mapOn('gm:globaldragmodetoggled', eventHandler);
+      mapOn('gm:globalcutmodetoggled', eventHandler);
+      mapOn('gm:globalsnappingmodetoggled', eventHandler);
 
-      geoman.mapAdapter.on('gm:create', (event) => eventHandler({ ...event, type: 'gm:create' }));
-      geoman.mapAdapter.on('gm:editstart', (event) => eventHandler({ ...event, type: 'gm:editstart' }));
-      geoman.mapAdapter.on('gm:editend', (event) => eventHandler({ ...event, type: 'gm:editend' }));
+      mapOn('gm:create', eventHandler);
+      mapOn('gm:editstart', eventHandler);
+      mapOn('gm:editend', eventHandler);
 
-      geoman.mapAdapter.on('gm:remove', (event) => eventHandler({ ...event, type: 'gm:remove' }));
+      mapOn('gm:remove', eventHandler);
 
-      geoman.mapAdapter.on('gm:rotatestart', (event) => eventHandler({ ...event, type: 'gm:rotatestart' }));
-      geoman.mapAdapter.on('gm:rotateend', (event) => eventHandler({ ...event, type: 'gm:rotateend' }));
+      mapOn('gm:rotatestart', eventHandler);
+      mapOn('gm:rotateend', eventHandler);
 
-      geoman.mapAdapter.on('gm:dragstart', (event) => eventHandler({ ...event, type: 'gm:dragstart' }));
-      geoman.mapAdapter.on('gm:dragend', (event) => eventHandler({ ...event, type: 'gm:dragend' }));
+      mapOn('gm:dragstart', eventHandler);
+      mapOn('gm:dragend', eventHandler);
 
-      geoman.mapAdapter.on('gm:cut', (event) => eventHandler({ ...event, type: 'gm:cut' }));
+      mapOn('gm:cut', eventHandler);
 
+      mapOn('gm:helper', eventHandler);
+      mapOn('gm:control', eventHandler);
 
       // Cleanup on unmount
       return () => {

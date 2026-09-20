@@ -1,8 +1,12 @@
 import { useEffect, useRef } from 'react';
 import * as maplibregl from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { Geoman } from '@geoman-io/maplibre-geoman-pro';
 import { mapStyle } from '../mapStyle';
+
+// MapLibre GL JS v6 no longer resolves its own web worker once bundled, so the app must
+// point it at one before creating a map. Vite serves the worker via the `?worker&url` query.
+maplibregl.setWorkerUrl(workerUrl);
 
 /**
  * A MapLibre map + Geoman Pro instance with the native control bar disabled —
@@ -28,7 +32,6 @@ export default function GeomanMap({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    maplibregl.setWorkerUrl(maplibreWorkerUrl);
     const map = new maplibregl.Map({ container, style: mapStyle, center, zoom });
     const gm = new Geoman(map, {
       settings: { useControlsUi: false, idGenerator: () => crypto.randomUUID() },

@@ -8,6 +8,13 @@ import '@geoman-io/maplibre-geoman-pro/dist/maplibre-geoman.css';
 import mapStyle from '@/lib/maplibre-style';
 import { useConfig } from '@/hooks/useConfig';
 
+// MapLibre GL JS v6 no longer resolves its own web worker once bundled, so the app must
+// point it at one before creating a map. `new URL(..., import.meta.url)` is the
+// bundler-agnostic form (Turbopack/webpack/esbuild all resolve it).
+maplibregl.setWorkerUrl(
+  new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href,
+);
+
 export type GisMapHandle = {
   map: maplibregl.Map;
   gm: Geoman;

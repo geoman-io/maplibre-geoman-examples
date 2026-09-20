@@ -1,6 +1,5 @@
 # This repo is a pnpm workspace (see pnpm-workspace.yaml).
-# pnpm is pinned via the root package.json "packageManager" field (pnpm@11.7.0).
-# Node is pinned via .tool-versions (Angular 22 requires Node >= 22.22.3).
+# Node and pnpm are pinned via mise.toml (Angular 22 requires Node >= 22.22.3).
 
 # Install all workspace dependencies (single lockfile at the root).
 install:

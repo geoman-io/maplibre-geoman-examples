@@ -51,6 +51,10 @@
     });
     
     geoman = new Geoman(map, gmOptions);
+    const mapOn = geoman.mapAdapter.on.bind(geoman.mapAdapter) as unknown as (
+      eventName: string,
+      listener: (event: unknown) => void,
+    ) => void;
     map.once(`gm:loaded`, () => {
       console.log('Geoman loaded', geoman);
       loadDevShapes();
@@ -69,42 +73,42 @@
     // enable drawing tools
 
     // Mode events
-    map.on('gm:globaldrawmodetoggled', (event) => handleEvent(event));
-    map.on('gm:globaleditmodetoggled', (event) => handleEvent(event));
-    map.on('gm:globaldeletemodetoggled', (event) => handleEvent(event));
-    map.on('gm:globalrotatemodetoggled', (event) => handleEvent(event));
-    map.on('gm:globaldragmodetoggled', (event) => handleEvent(event));
-    map.on('gm:globalcutmodetoggled', (event) => handleEvent(event));
-    map.on('gm:globalsnappingmodetoggled', (event) => handleEvent(event));
+    mapOn('gm:globaldrawmodetoggled', (event) => handleEvent(event));
+    mapOn('gm:globaleditmodetoggled', (event) => handleEvent(event));
+    mapOn('gm:globalremovemodetoggled', (event) => handleEvent(event));
+    mapOn('gm:globalrotatemodetoggled', (event) => handleEvent(event));
+    mapOn('gm:globaldragmodetoggled', (event) => handleEvent(event));
+    mapOn('gm:globalcutmodetoggled', (event) => handleEvent(event));
+    mapOn('gm:globalsnappingmodetoggled', (event) => handleEvent(event));
 
     // Drawing events
-    //map.on('gm:draw', (event) => handleEvent(event)); // Enable to listen to all draw events
-    map.on('gm:create', (event) => handleEvent(event));
+    //geoman!.mapAdapter.on('gm:draw', (event) => handleEvent(event)); // Enable to listen to all draw events
+    mapOn('gm:create', (event) => handleEvent(event));
 
     // Edit events
-    //map.on('gm:edit', (event) => handleEvent(event)); // Enable to listen to all edit events
-    map.on('gm:editstart', (event) => handleEvent(event));
-    map.on('gm:editend', (event) => handleEvent(event));
+    //geoman!.mapAdapter.on('gm:edit', (event) => handleEvent(event)); // Enable to listen to all edit events
+    mapOn('gm:editstart', (event) => handleEvent(event));
+    mapOn('gm:editend', (event) => handleEvent(event));
 
     // Remove events
-    map.on('gm:remove', (event) => handleEvent(event));
+    mapOn('gm:remove', (event) => handleEvent(event));
 
     // Rotate events
-    //map.on('gm:rotate', (event) => handleEvent(event)); // Enable to listen to all rotate events
-    map.on('gm:rotatestart', (event) => handleEvent(event));
-    map.on('gm:rotateend', (event) => handleEvent(event));
+    //geoman!.mapAdapter.on('gm:rotate', (event) => handleEvent(event)); // Enable to listen to all rotate events
+    mapOn('gm:rotatestart', (event) => handleEvent(event));
+    mapOn('gm:rotateend', (event) => handleEvent(event));
 
     // Drag events
-    //map.on('gm:drag', (event) => handleEvent(event)); // Enable to listen to all drag events
-    map.on('gm:dragstart', (event) => handleEvent(event));
-    map.on('gm:dragend', (event) => handleEvent(event));
+    //geoman!.mapAdapter.on('gm:drag', (event) => handleEvent(event)); // Enable to listen to all drag events
+    mapOn('gm:dragstart', (event) => handleEvent(event));
+    mapOn('gm:dragend', (event) => handleEvent(event));
 
     // Cut events
-    map.on('gm:cut', (event) => handleEvent(event));
+    mapOn('gm:cut', (event) => handleEvent(event));
 
     // Enable to listen to all helper and control events
-    map.on('gm:helper', (event) => handleEvent(event));
-    map.on('gm:control', (event) => handleEvent(event));
+    mapOn('gm:helper', (event) => handleEvent(event));
+    mapOn('gm:control', (event) => handleEvent(event));
   });
 
   onDestroy(() => {

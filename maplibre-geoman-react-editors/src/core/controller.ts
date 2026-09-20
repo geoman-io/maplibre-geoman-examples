@@ -169,7 +169,7 @@ export class EditorController {
       }
       this.persist();
     };
-    for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) this.gm.mapAdapter.on(ev, onUpdate);
+    for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) this.map.on(ev as never, onUpdate);
 
     this.gm.mapAdapter.on('gm:remove', (e: { feature: FeatureData }) => {
       const id = String(e.feature.id);
@@ -183,9 +183,7 @@ export class EditorController {
     });
 
     this.gm.mapAdapter.on('gm:history', (e) => {
-      if ('canUndo' in e && typeof e.canUndo === 'boolean' && 'canRedo' in e && typeof e.canRedo === 'boolean') {
-        store().setHistory(e.canUndo, e.canRedo);
-      }
+      if ('canUndo' in e && 'canRedo' in e) store().setHistory(e.canUndo, e.canRedo);
     });
   }
 

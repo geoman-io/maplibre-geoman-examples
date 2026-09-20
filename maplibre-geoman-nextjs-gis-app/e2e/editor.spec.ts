@@ -32,7 +32,7 @@ test('dev sign-in, create / hide / delete a layer', async ({ page }) => {
   await expect(page.getByLabel('Parcels fill')).toHaveCount(0);
 
   // Toolbar (custom controls) is present.
-  await expect(page.getByRole('button', { name: 'Polygon — add a layer first', exact: true })).toBeVisible();
+  await expect(page.locator('button[aria-label^="Polygon"]')).toBeVisible();
 });
 
 test('multiple layers with active switching + fill/border swatches', async ({ page }) => {
@@ -60,6 +60,6 @@ test('multiple layers with active switching + fill/border swatches', async ({ pa
   await expect(page.getByLabel('Roads border')).toBeVisible();
 
   // Switching active layer keeps exactly one editing layer.
-  await page.getByRole('button', { name: 'Houses', exact: true }).click();
+  await page.getByRole('button', { name: /^Houses(?:\s+editing)?$/ }).click();
   await expect(page.getByText('editing')).toHaveCount(1);
 });

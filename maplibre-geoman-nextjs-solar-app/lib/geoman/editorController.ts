@@ -229,7 +229,7 @@ export class EditorController {
       }
     };
     for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) {
-      this.gm.mapAdapter.on(ev, onUpdate);
+      map.on(ev as never, onUpdate);
     }
 
     this.gm.mapAdapter.on('gm:remove', (e: { feature: FeatureData }) => {
@@ -244,7 +244,7 @@ export class EditorController {
     });
 
     this.gm.mapAdapter.on('gm:history', (e) => {
-      if ('canUndo' in e && typeof e.canUndo === 'boolean' && 'canRedo' in e && typeof e.canRedo === 'boolean') {
+      if ('canUndo' in e && 'canRedo' in e) {
         store().setHistory(e.canUndo, e.canRedo);
       }
     });
@@ -650,7 +650,7 @@ export class EditorController {
     await this.syncGeofencing();
     if (this.geofencingWired) return;
     this.geofencingWired = true;
-    this.gm.mapAdapter.on('gm:geofencing_violation', () => {
+    this.map().on('gm:geofencing_violation' as never, () => {
       store().setNotice('Keep it on a roof plane — blocked by geofencing.');
     });
   }

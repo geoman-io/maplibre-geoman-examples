@@ -7,6 +7,13 @@ import * as ml from 'maplibre-gl';
 import { demoFeatures } from '../../fixtures/features';
 import mapStyle from './style';
 
+// MapLibre GL JS v6 no longer resolves its own web worker once bundled, so the app must
+// point it at one before creating a map. `new URL(..., import.meta.url)` is the
+// bundler-agnostic form (Turbopack/webpack/esbuild all resolve it).
+ml.setWorkerUrl(
+  new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href,
+);
+
 @Component({
     selector: 'app-geoman-map',
     imports: [],
@@ -24,7 +31,6 @@ export class GeomanMapComponent implements OnInit {
     }
 
     // Create MapLibre map
-    ml.setWorkerUrl('/vendor/maplibre/maplibre-gl-worker.mjs');
     const map = new ml.Map({
       container: this.mapElement.nativeElement,
       style: mapStyle,
@@ -44,6 +50,10 @@ export class GeomanMapComponent implements OnInit {
 
     // Instantiate Geoman
     const geoman = new Geoman(map, gmOptions);
+    const mapOn = geoman.mapAdapter.on.bind(geoman.mapAdapter) as unknown as (
+      eventName: string,
+      listener: (event: unknown) => void,
+    ) => void;
 
     // Load some demo shapes
     const loadDevShapes = () => {
@@ -57,7 +67,7 @@ export class GeomanMapComponent implements OnInit {
     };
 
     // Wait for geoman ready
-    geoman.mapAdapter.on('gm:loaded', () => {
+    mapOn('gm:loaded', () => {
       console.log('Geoman fully loaded');
       loadDevShapes();
 
@@ -66,35 +76,37 @@ export class GeomanMapComponent implements OnInit {
     });
 
     // Listen for all relevant Geoman events
-    geoman.mapAdapter.on('gm:globaldrawmodetoggled', e => this.gmEvent.emit(e));
-    geoman.mapAdapter.on('gm:globaleditmodetoggled', e => this.gmEvent.emit(e));
-    geoman.mapAdapter.on('gm:globaldeletemodetoggled', e => this.gmEvent.emit(e));
-    geoman.mapAdapter.on('gm:globalrotatemodetoggled', e => this.gmEvent.emit(e));
-    geoman.mapAdapter.on('gm:globaldragmodetoggled', e => this.gmEvent.emit(e));
-    geoman.mapAdapter.on('gm:globalcutmodetoggled', e => this.gmEvent.emit(e));
-    geoman.mapAdapter.on('gm:globalsnappingmodetoggled', e => this.gmEvent.emit(e));
+    mapOn('gm:globaldrawmodetoggled', e => this.gmEvent.emit(e));
+    mapOn('gm:globaleditmodetoggled', e => this.gmEvent.emit(e));
+    mapOn('gm:globalremovemodetoggled', e => this.gmEvent.emit(e));
+    mapOn('gm:globalrotatemodetoggled', e => this.gmEvent.emit(e));
+    mapOn('gm:globaldragmodetoggled', e => this.gmEvent.emit(e));
+    mapOn('gm:globalcutmodetoggled', e => this.gmEvent.emit(e));
+    mapOn('gm:globalsnappingmodetoggled', e => this.gmEvent.emit(e));
 
     // Create events
-    geoman.mapAdapter.on('gm:create', e => this.gmEvent.emit(e));
+    mapOn('gm:create', e => this.gmEvent.emit(e));
 
     // Edit events
-    geoman.mapAdapter.on('gm:editstart', e => this.gmEvent.emit(e));
-    geoman.mapAdapter.on('gm:editend', e => this.gmEvent.emit(e));
+    mapOn('gm:editstart', e => this.gmEvent.emit(e));
+    mapOn('gm:editend', e => this.gmEvent.emit(e));
 
     // Remove events
-    geoman.mapAdapter.on('gm:remove', e => this.gmEvent.emit(e));
+    mapOn('gm:remove', e => this.gmEvent.emit(e));
 
     // Rotate events
-    geoman.mapAdapter.on('gm:rotatestart', e => this.gmEvent.emit(e));
-    geoman.mapAdapter.on('gm:rotateend', e => this.gmEvent.emit(e));
+    mapOn('gm:rotatestart', e => this.gmEvent.emit(e));
+    mapOn('gm:rotateend', e => this.gmEvent.emit(e));
 
     // Drag events
-    geoman.mapAdapter.on('gm:dragstart', e => this.gmEvent.emit(e));
-    geoman.mapAdapter.on('gm:dragend', e => this.gmEvent.emit(e));
+    mapOn('gm:dragstart', e => this.gmEvent.emit(e));
+    mapOn('gm:dragend', e => this.gmEvent.emit(e));
 
     // Cut events
-    geoman.mapAdapter.on('gm:cut', e => this.gmEvent.emit(e));
+    mapOn('gm:cut', e => this.gmEvent.emit(e));
 
     // Helper & control
+    mapOn('gm:helper', e => this.gmEvent.emit(e));
+    mapOn('gm:control', e => this.gmEvent.emit(e));
   }
 }

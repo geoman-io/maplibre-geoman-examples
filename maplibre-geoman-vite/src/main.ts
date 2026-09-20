@@ -4,7 +4,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css";
 
 import * as ml from "maplibre-gl";
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+
+// MapLibre GL JS v6 no longer resolves its own web worker once bundled, so the app must
+// point it at one before creating a map. Vite serves the worker via the `?worker&url` query.
+ml.setWorkerUrl(workerUrl);
 import {
   GeoJsonImportFeature,
   Geoman,
@@ -38,8 +42,6 @@ const mapLibreStyle: ml.StyleSpecification = {
     },
   ],
 };
-
-ml.setWorkerUrl(maplibreWorkerUrl);
 
 const map = new ml.Map({
   container: "dev-map",

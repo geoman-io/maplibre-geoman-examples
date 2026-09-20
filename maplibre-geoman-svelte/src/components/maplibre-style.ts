@@ -1,4 +1,4 @@
-import * as ml from 'maplibre-gl';
+import type * as ml from 'maplibre-gl';
 
 
 const mapStyle: ml.StyleSpecification = {

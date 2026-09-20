@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -12,8 +11,8 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "@geoman-io/maplibre-geoman-pro": "0.11.0",
-    "maplibre-gl": "^6.7.0",
+    "@geoman-io/maplibre-geoman-pro": "0.12.0",
+    "maplibre-gl": "^6.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "zustand": "^5.0.14"
