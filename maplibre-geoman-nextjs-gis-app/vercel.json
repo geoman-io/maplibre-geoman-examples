@@ -6,5 +6,5 @@
     }
   },
   "installCommand": "pnpm config set \"//npm.geoman.io/:_authToken\" \"$NPM_TOKEN_GEOMAN\" && pnpm install --frozen-lockfile",
-  "buildCommand": "if [ \"$VERCEL_ENV\" = production ]; then pnpm db:migrate; fi && next build"
+    "buildCommand": "if [ \"$VERCEL_ENV\" = production ]; then pnpm db:migrate; fi && pnpm build"
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Geoman } from '@geoman-io/maplibre-geoman-pro';
 import { useEditorStore } from '@/hooks/useEditorStore';
+import { useConfig } from '@/hooks/useConfig';
 import type { EditorController } from '@/lib/geoman/editorController';
 import type { GeometryType } from '@/lib/types';
 
@@ -205,6 +206,8 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
   const canRedo = useEditorStore((s) => s.canRedo);
   // Single source of truth — so Esc (which clears it) also un-highlights here.
   const activeTool = useEditorStore((s) => s.activeTool);
+  const snapping = useConfig((s) => s.snapping);
+  const measurements = useConfig((s) => s.measurements);
 
   const findTitle = (key: string) =>
     GROUPS.flatMap((g) => g.tools).find((t) => t.id === key)?.title ?? key;
@@ -287,6 +290,20 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
         );
       })}
       {sep('sep-helpers')}
+      {tbtn(
+        'measure',
+        'measure',
+        'Measure (length / area)',
+        () => useConfig.getState().set({ measurements: !measurements }),
+        { on: measurements },
+      )}
+      {tbtn(
+        'snapping',
+        'snap',
+        'Snapping',
+        () => useConfig.getState().set({ snapping: !snapping }),
+        { on: snapping },
+      )}
       {tbtn('zoom', 'zoom', 'Zoom to features', () => controller.zoomToAll())}
     </div>
   );
