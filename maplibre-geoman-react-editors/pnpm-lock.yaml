@@ -12,7 +12,7 @@ importers:
         specifier: 0.12.0
         version: 0.12.0(maplibre-gl@6.10.0)
       maplibre-gl:
-        specifier: ^6.2.0
+        specifier: ^6.10.0
         version: 6.10.0
       react:
         specifier: ^19.2.7
@@ -499,10 +499,6 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  pbf@5.1.0:
-    resolution: {integrity: sha512-Wv0yo0+uZepnoNEKsquhar1F18LogB8oeEikIhUXG16udbiXG7JecHGySwoo6kuMgjmbQYzdrTZlO+/K9t8eZg==}
-    hasBin: true
-
   pbf@5.1.2:
     resolution: {integrity: sha512-mnvGdvOrIvJOBGUEdGkrVXjN8E/VkIJCkf2eS1DH2yv82ORUlLttmDt0rWY38yYZmVwciZwBUvHM20qxBZf40w==}
     hasBin: true
@@ -715,7 +711,7 @@ snapshots:
     dependencies:
       '@mapbox/point-geometry': 1.1.0
       '@types/geojson': 7946.0.16
-      pbf: 5.1.0
+      pbf: 5.1.2
 
   '@maplibre/geojson-vt@6.1.1':
     dependencies:
@@ -738,7 +734,7 @@ snapshots:
     dependencies:
       '@mapbox/point-geometry': 1.1.0
       '@types/geojson': 7946.0.16
-      pbf: 5.1.0
+      pbf: 5.1.2
 
   '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
@@ -1012,10 +1008,6 @@ snapshots:
   murmurhash-js@1.0.0: {}
 
   nanoid@3.3.15: {}
-
-  pbf@5.1.0:
-    dependencies:
-      resolve-protobuf-schema: 2.1.0
 
   pbf@5.1.2:
     dependencies:

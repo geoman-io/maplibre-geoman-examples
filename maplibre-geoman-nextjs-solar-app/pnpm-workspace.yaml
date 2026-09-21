@@ -15,3 +15,5 @@ allowBuilds:
 # immediately with no per-version re-pinning.
 minimumReleaseAgeExclude:
   - '@geoman-io/*'
+  - maplibre-gl
+  - '@maplibre/maplibre-gl-style-spec'

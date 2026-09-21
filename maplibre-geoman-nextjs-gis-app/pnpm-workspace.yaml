@@ -16,3 +16,5 @@ allowBuilds:
 # pnpm-workspace.yaml, NOT .npmrc, in pnpm 11.)
 minimumReleaseAgeExclude:
   - '@geoman-io/*'
+  - maplibre-gl
+  - '@maplibre/maplibre-gl-style-spec'

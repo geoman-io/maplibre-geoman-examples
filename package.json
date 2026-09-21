@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "description": "Framework example apps for @geoman-io maplibre/mapbox Geoman, managed as a pnpm workspace.",
-  "packageManager": "pnpm@11.7.0",
   "engines": {
     "node": ">=22.22.3"
   },
