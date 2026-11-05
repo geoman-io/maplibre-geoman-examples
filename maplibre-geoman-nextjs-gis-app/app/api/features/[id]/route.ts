@@ -40,7 +40,7 @@ export async function PATCH(
   const targetLayerId = parsed.data.layerId;
   if (targetLayerId || parsed.data.geojson) {
     const [current] = await db
-      .select({ layerId: feature.layerId })
+      .select({ layerId: feature.layerId, geojson: feature.geojson })
       .from(feature)
       .where(and(eq(feature.id, id), eq(feature.userId, user.id)));
     const layerId = targetLayerId ?? current?.layerId;
@@ -50,7 +50,8 @@ export async function PATCH(
         .from(layer)
         .where(and(eq(layer.id, layerId), eq(layer.userId, user.id)));
       if (!owned) return notFound();
-      if (parsed.data.geojson && !geometryFits(owned.geometryType, parsed.data.geojson.geometry)) {
+      const geometry = parsed.data.geojson?.geometry ?? (current?.geojson as { geometry?: unknown } | undefined)?.geometry;
+      if (geometry && !geometryFits(owned.geometryType, geometry)) {
         return badRequest('Geometry does not match the layer');
       }
     }
