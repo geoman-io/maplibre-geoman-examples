@@ -77,7 +77,14 @@ function measureGeometry(geometry: Geometry): Measurement {
 }
 
 export function measureFeature(feature: Feature): Measurement | null {
-  return feature.geometry ? measureGeometry(feature.geometry) : null;
+  if (!feature?.geometry || !('coordinates' in feature.geometry) || feature.geometry.coordinates == null) {
+    return null;
+  }
+  try {
+    return measureGeometry(feature.geometry);
+  } catch {
+    return null;
+  }
 }
 
 /** Human-readable distance (m / km). */

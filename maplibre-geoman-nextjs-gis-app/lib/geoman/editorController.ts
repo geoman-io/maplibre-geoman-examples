@@ -14,7 +14,8 @@ import { useEditorStore } from '@/hooks/useEditorStore';
 import { DEFAULT_CONFIG, type Config } from '@/hooks/useConfig';
 import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
-import { featureBounds, inferShape, stringProps, translateGeometry } from '@/lib/io';
+import { geometryProblem, isUsableFeature, stringMetadata } from '@/lib/geojson-guard';
+import { featureBounds, inferShape, translateGeometry } from '@/lib/io';
 import { fillExpression, matchesFilter } from '@/lib/symbology';
 import { simplifyFeature } from '@/lib/simplify';
 import type {
@@ -156,13 +157,17 @@ export class EditorController {
       // Read straight from the feature — do NOT mutate it here (updateProperties
       // would record a second history entry, making one draw take two undos).
       const read = readFeatureData(e.feature);
-      const dto = await api.upsertFeature({
-        id: read.id,
-        layerId,
-        shape: e.shape ?? read.shape,
-        geojson: read.geojson,
-        metadata: read.metadata,
-      });
+      if (geometryProblem(read.geojson.geometry)) return;
+      const dto = await api
+        .upsertFeature({
+          id: read.id,
+          layerId,
+          shape: e.shape ?? read.shape,
+          geojson: read.geojson,
+          metadata: read.metadata,
+        })
+        .catch(() => null);
+      if (!dto) return;
       store().upsertFeature(dto);
       store().setSelectedFeature(read.id);
     });
@@ -171,12 +176,15 @@ export class EditorController {
       for (const fd of e.feature ? [e.feature] : (e.features ?? [])) {
         const read = readFeatureData(fd);
         if (!store().features[read.id]) continue;
-        const dto = await api.updateFeature(read.id, {
-          geojson: read.geojson,
-          shape: read.shape,
-          metadata: read.metadata,
-        });
-        store().upsertFeature(dto);
+        if (geometryProblem(read.geojson.geometry)) continue;
+        const dto = await api
+          .updateFeature(read.id, {
+            geojson: read.geojson,
+            shape: read.shape,
+            metadata: read.metadata,
+          })
+          .catch(() => null);
+        if (dto) store().upsertFeature(dto);
       }
     };
     for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) {
@@ -223,7 +231,9 @@ export class EditorController {
   async paste() {
     const clip = store().clipboard as Feature | null;
     const layerId = store().activeLayerId;
-    if (!clip?.geometry || !layerId) return;
+    if (!clip?.geometry || geometryProblem(clip.geometry) || !layerId) return;
+    const shape = inferShape(clip.geometry);
+    if (!shape) return;
     const id = crypto.randomUUID();
     const geojson: Feature = {
       type: 'Feature',
@@ -233,7 +243,7 @@ export class EditorController {
     const dto = await api.upsertFeature({
       id,
       layerId,
-      shape: inferShape(clip.geometry),
+      shape,
       geojson,
       metadata: {},
     });
@@ -262,7 +272,9 @@ export class EditorController {
     if (!id) return;
     const row = store().features[id];
     if (!row) return;
-    await this.gm.edit.setGeometry(id, simplifyFeature(row.geojson).geometry as never);
+    const simplified = simplifyFeature(row.geojson);
+    if (geometryProblem(simplified.geometry)) return;
+    await this.gm.edit.setGeometry(id, simplified.geometry as never).catch(() => {});
   }
 
   /** Repair the selected feature's geometry (de-dupe vertices, split a
@@ -488,21 +500,32 @@ export class EditorController {
 
   /** Import a GeoJSON FeatureCollection into a layer (persist + render). */
   async importGeoJson(layerId: string, fc: FeatureCollection) {
-    const dtos = await Promise.all(
-      fc.features
-        .filter((f) => f.geometry)
-        .map((f) => {
+    const layer = store().layers.find((item) => item.id === layerId);
+    const accepted = fc.features.filter((feature) => {
+      if (!isUsableFeature(feature)) return false;
+      const shape = inferShape(feature.geometry);
+      if (!shape) return false;
+      if (!layer?.geometryType) return true;
+      if (layer.geometryType === 'point') return shape === 'marker';
+      if (layer.geometryType === 'line') return shape === 'line';
+      return shape === 'polygon';
+    });
+    const dtos = (
+      await Promise.all(
+        accepted.map(async (feature) => {
           const id = crypto.randomUUID();
-          const shape = inferShape(f.geometry);
-          const metadata = stringProps(f.properties);
+          const shape = inferShape(feature.geometry);
+          if (!shape) return null;
+          const metadata = stringMetadata(feature.properties);
           const geojson = {
-            ...f,
+            ...feature,
             id,
-            properties: { ...(f.properties ?? {}), id, shape, metadata },
+            properties: { ...(feature.properties ?? {}), id, shape, metadata },
           } as Feature;
-          return api.upsertFeature({ id, layerId, shape, geojson, metadata });
+          return api.upsertFeature({ id, layerId, shape, geojson, metadata }).catch(() => null);
         }),
-    );
+      )
+    ).filter((dto) => dto != null);
     for (const dto of dtos) store().upsertFeature(dto);
     this.gm.dataLayers.setData(layerId, geoJsonFor(layerId));
   }

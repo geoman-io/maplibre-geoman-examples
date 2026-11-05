@@ -8,12 +8,14 @@ import { geometryTypeShape, layerSchemaShape, layerStyleShape } from '@/app/api/
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
+const int4 = z.number().int().min(-2_147_483_648).max(2_147_483_647);
+
 const patchSchema = z.object({
-  name: z.string().min(1).max(120).optional(),
+  name: z.string().trim().min(1).max(120).optional(),
   color: hex.optional(),
   borderColor: hex.optional(),
   visible: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
+  sortOrder: int4.optional(),
   schema: layerSchemaShape.optional(),
   style: layerStyleShape.optional(),
   geometryType: geometryTypeShape.optional(),

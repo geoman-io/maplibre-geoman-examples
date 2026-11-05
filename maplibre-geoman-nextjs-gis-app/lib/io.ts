@@ -1,9 +1,11 @@
 import type { Feature, FeatureCollection, Geometry, Position } from 'geojson';
+import { eachFinitePosition, geometryProblem, isUsableFeature } from '@/lib/geojson-guard';
 
 export type Bounds = [[number, number], [number, number]];
 
 /** Geometry kind Geoman understands, inferred from a GeoJSON geometry. */
-export function inferShape(geometry: Geometry): string {
+export function inferShape(geometry: Geometry | null | undefined): string | null {
+  if (!geometry || geometryProblem(geometry)) return null;
   switch (geometry.type) {
     case 'Polygon':
     case 'MultiPolygon':
@@ -15,31 +17,19 @@ export function inferShape(geometry: Geometry): string {
     case 'MultiPoint':
       return 'marker';
     default:
-      return 'polygon';
-  }
-}
-
-function eachPosition(geometry: Geometry, fn: (p: Position) => void) {
-  const walk = (coords: unknown) => {
-    if (typeof (coords as number[])[0] === 'number') {
-      fn(coords as Position);
-    } else {
-      for (const c of coords as unknown[]) walk(c);
-    }
-  };
-  if (geometry.type === 'GeometryCollection') {
-    geometry.geometries.forEach((g) => eachPosition(g, fn));
-  } else {
-    walk(geometry.coordinates);
+      return null;
   }
 }
 
 /** A copy of a geometry with every coordinate shifted by (dx, dy) degrees. */
 export function translateGeometry<G extends Geometry>(geometry: G, dx: number, dy: number): G {
+  if (!geometry || geometryProblem(geometry)) return geometry;
   const shift = (coords: unknown): unknown =>
-    typeof (coords as number[])[0] === 'number'
+    Array.isArray(coords) && typeof coords[0] === 'number'
       ? [(coords as Position)[0] + dx, (coords as Position)[1] + dy, ...(coords as number[]).slice(2)]
-      : (coords as unknown[]).map(shift);
+      : Array.isArray(coords)
+        ? coords.map(shift)
+        : coords;
   if (geometry.type === 'GeometryCollection') {
     return { ...geometry, geometries: geometry.geometries.map((g) => translateGeometry(g, dx, dy)) };
   }
@@ -52,8 +42,8 @@ export function featureBounds(feature: Feature): Bounds | null {
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-  if (!feature.geometry) return null;
-  eachPosition(feature.geometry, ([x, y]) => {
+  if (!feature.geometry || geometryProblem(feature.geometry)) return null;
+  eachFinitePosition(feature.geometry, ([x, y]) => {
     if (x < minX) minX = x;
     if (y < minY) minY = y;
     if (x > maxX) maxX = x;
@@ -79,13 +69,20 @@ export function downloadGeoJson(name: string, fc: FeatureCollection) {
 
 /** Parse text into a FeatureCollection (accepts a Feature or a bare geometry). */
 export function parseGeoJson(text: string): FeatureCollection {
-  const data = JSON.parse(text);
-  if (data.type === 'FeatureCollection') return data as FeatureCollection;
-  if (data.type === 'Feature') return { type: 'FeatureCollection', features: [data] };
-  if (typeof data.type === 'string') {
-    return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: data }] };
+  const data = JSON.parse(text) as { type?: unknown; features?: unknown; geometry?: unknown };
+  let features: unknown[] = [];
+  if (data?.type === 'FeatureCollection' && Array.isArray(data.features)) {
+    features = data.features;
+  } else if (data?.type === 'Feature') {
+    features = [data];
+  } else if (typeof data?.type === 'string' && data.type !== 'FeatureCollection') {
+    features = [{ type: 'Feature', properties: {}, geometry: data }];
+  } else {
+    throw new Error('Not valid GeoJSON');
   }
-  throw new Error('Not valid GeoJSON');
+  const usable = features.filter(isUsableFeature);
+  if (usable.length === 0) throw new Error('No usable features');
+  return { type: 'FeatureCollection', features: usable };
 }
 
 /** Keep only string-valued properties as the feature's metadata map. */

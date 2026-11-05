@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { feature, layer } from '@/lib/db/schema';
 import { badRequest, getUser, notFound, unauthorized } from '@/lib/api';
+import { geometryProblem, MAX_ID_LENGTH } from '@/lib/geojson-guard';
 
 export async function GET(req: Request) {
   const user = await getUser();
@@ -18,12 +19,24 @@ export async function GET(req: Request) {
   return NextResponse.json({ features });
 }
 
+const idSchema = z.string().trim().min(1).max(MAX_ID_LENGTH);
+const metadataSchema = z.record(z.string().max(120), z.string().max(2000)).optional();
+const geojsonSchema = z
+  .object({
+    type: z.literal('Feature'),
+    geometry: z.unknown(),
+    properties: z.unknown().optional(),
+  })
+  .refine((feature) => geometryProblem(feature.geometry) === null, {
+    message: 'Geometry is empty, non-finite, or not a drawable shape',
+  });
+
 const upsertSchema = z.object({
-  id: z.string().min(1),
-  layerId: z.string().min(1),
-  shape: z.string().optional(),
-  geojson: z.record(z.string(), z.unknown()),
-  metadata: z.record(z.string(), z.string()).optional(),
+  id: idSchema,
+  layerId: idSchema,
+  shape: z.string().max(40).optional(),
+  geojson: geojsonSchema,
+  metadata: metadataSchema,
 });
 
 export async function POST(req: Request) {

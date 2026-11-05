@@ -33,10 +33,16 @@ function adaptiveTolerance(geom: Geometry): number {
 /** Whole-feature Douglas–Peucker simplification. Removes redundant vertices
  *  without mangling the shape; points are returned untouched. */
 export function simplifyFeature(feature: Feature, tolerance?: number): Feature {
-  if (feature.geometry.type === 'Point' || feature.geometry.type === 'MultiPoint') return feature;
-  return simplify(feature, {
-    tolerance: tolerance ?? adaptiveTolerance(feature.geometry),
-    highQuality: true,
-    mutate: false,
-  });
+  if (!feature?.geometry || feature.geometry.type === 'Point' || feature.geometry.type === 'MultiPoint') {
+    return feature;
+  }
+  try {
+    return simplify(feature, {
+      tolerance: tolerance ?? adaptiveTolerance(feature.geometry),
+      highQuality: true,
+      mutate: false,
+    });
+  } catch {
+    return feature;
+  }
 }
