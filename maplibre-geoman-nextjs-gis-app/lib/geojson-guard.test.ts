@@ -67,6 +67,52 @@ test('parse, translate, measure, and simplify do not throw on fuzzed input', () 
   assert.equal(inferShape(broken), null);
 });
 
+test('rejects unclosed and collapsed rings', () => {
+  assert.equal(
+    geometryProblem({
+      type: 'Polygon',
+      coordinates: [
+        [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+        ],
+      ],
+    }),
+    'unclosed ring',
+  );
+  assert.equal(
+    geometryProblem({
+      type: 'Polygon',
+      coordinates: [
+        [
+          [0, 0],
+          [0, 0],
+          [0, 0],
+          [0, 0],
+        ],
+      ],
+    }),
+    'collapsed ring',
+  );
+  assert.equal(
+    geometryProblem({
+      type: 'Polygon',
+      coordinates: [
+        [
+          [0, 0],
+          [2, 0],
+          [2, 2],
+          [0, 2],
+          [0, 0],
+        ],
+      ],
+    }),
+    null,
+  );
+});
+
 test('saved styles and deep geometry do not throw', () => {
   assert.equal(
     matchesFilter({ a: 'hello' }, { field: 'a', op: 'contains', value: undefined as never }),

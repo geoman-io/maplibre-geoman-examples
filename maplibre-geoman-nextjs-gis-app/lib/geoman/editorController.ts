@@ -521,22 +521,20 @@ export class EditorController {
       if (layer.geometryType === 'line') return shape === 'line';
       return shape === 'polygon';
     });
-    const dtos = (
-      await Promise.all(
-        accepted.map(async (feature) => {
-          const id = crypto.randomUUID();
-          const shape = inferShape(feature.geometry);
-          if (!shape) return null;
-          const metadata = stringMetadata(feature.properties);
-          const geojson = {
-            ...feature,
-            id,
-            properties: { ...(feature.properties ?? {}), id, shape, metadata },
-          } as Feature;
-          return api.upsertFeature({ id, layerId, shape, geojson, metadata }).catch(() => null);
-        }),
-      )
-    ).filter((dto) => dto != null);
+    const dtos = [];
+    for (const feature of accepted) {
+      const id = crypto.randomUUID();
+      const shape = inferShape(feature.geometry);
+      if (!shape) continue;
+      const metadata = stringMetadata(feature.properties);
+      const geojson = {
+        ...feature,
+        id,
+        properties: { ...(feature.properties ?? {}), id, shape, metadata },
+      } as Feature;
+      const dto = await api.upsertFeature({ id, layerId, shape, geojson, metadata }).catch(() => null);
+      if (dto) dtos.push(dto);
+    }
     for (const dto of dtos) store().upsertFeature(dto);
     this.pushLayerData(layerId);
   }

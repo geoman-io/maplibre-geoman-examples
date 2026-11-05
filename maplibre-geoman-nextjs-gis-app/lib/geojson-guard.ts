@@ -39,12 +39,30 @@ function walk(value: unknown, visit: (position: Position) => void, depth = 0): b
   return value.every((item) => walk(item, visit, depth + 1));
 }
 
-function ringsAreClosed(rings: unknown): boolean {
+function samePoint(a: unknown, b: unknown): boolean {
   return (
-    Array.isArray(rings) &&
-    rings.length > 0 &&
-    rings.every((ring) => Array.isArray(ring) && ring.length >= 4)
+    Array.isArray(a) &&
+    Array.isArray(b) &&
+    a[0] === b[0] &&
+    a[1] === b[1]
   );
+}
+
+function ringProblem(ring: unknown): string | null {
+  if (!Array.isArray(ring) || ring.length < 4) return 'short ring';
+  if (!samePoint(ring[0], ring[ring.length - 1])) return 'unclosed ring';
+  const first = ring[0] as number[];
+  if (ring.every((position) => samePoint(position, first))) return 'collapsed ring';
+  return null;
+}
+
+function ringsAreUsable(rings: unknown): string | null {
+  if (!Array.isArray(rings) || rings.length === 0) return 'short ring';
+  for (const ring of rings) {
+    const problem = ringProblem(ring);
+    if (problem) return problem;
+  }
+  return null;
 }
 
 /** Why a geometry cannot be stored or drawn, or null when it is usable. */
@@ -70,12 +88,29 @@ export function geometryProblem(geometry: unknown): string | null {
     const parts = candidate.coordinates as unknown[];
     if (!parts.every((part) => Array.isArray(part) && part.length >= 2)) return 'short line';
   }
-  if (candidate.type === 'Polygon' && !ringsAreClosed(candidate.coordinates)) return 'short ring';
+  if (candidate.type === 'Polygon') return ringsAreUsable(candidate.coordinates);
   if (candidate.type === 'MultiPolygon') {
     const parts = candidate.coordinates as unknown[];
-    if (!parts.every((part) => ringsAreClosed(part))) return 'short ring';
+    if (!Array.isArray(parts) || parts.length === 0) return 'short ring';
+    for (const part of parts) {
+      const problem = ringsAreUsable(part);
+      if (problem) return problem;
+    }
   }
   return null;
+}
+
+/** Whether a drawable shape is allowed on a single-geometry layer. */
+export function geometryFits(
+  geometryType: 'point' | 'line' | 'polygon' | null | undefined,
+  geometry: unknown,
+): boolean {
+  if (geometryProblem(geometry) !== null) return false;
+  if (!geometryType) return true;
+  const type = (geometry as { type: string }).type;
+  if (geometryType === 'point') return type === 'Point' || type === 'MultiPoint';
+  if (geometryType === 'line') return type === 'LineString' || type === 'MultiLineString';
+  return type === 'Polygon' || type === 'MultiPolygon';
 }
 
 export function isUsableFeature(value: unknown): value is Feature {

@@ -214,14 +214,18 @@ export default function Toolbar({ gm, controller }: { gm: Geoman; controller: Ed
 
   const select = async (key: string, run: () => Promise<void> | void) => {
     if (!hasActiveLayer) return;
-    await gm.disableAllModes();
-    if (activeTool?.key === key) {
+    try {
+      await gm.disableAllModes();
+      if (activeTool?.key === key) {
+        useEditorStore.getState().setActiveTool(null);
+        return;
+      }
+      await run();
+      // Status bar shows the short name; the full descriptive title stays the tooltip.
+      useEditorStore.getState().setActiveTool({ key, title: findTitle(key).split(' — ')[0] });
+    } catch {
       useEditorStore.getState().setActiveTool(null);
-      return;
     }
-    await run();
-    // Status bar shows the short name; the full descriptive title stays the tooltip.
-    useEditorStore.getState().setActiveTool({ key, title: findTitle(key).split(' — ')[0] });
   };
 
   // Fluid selection: rest in the Select tool once a layer exists, so clicking a
