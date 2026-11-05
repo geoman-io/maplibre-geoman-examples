@@ -92,8 +92,8 @@ export default function LayerPanel({
     const [color, borderColor] = PALETTE[layers.length % PALETTE.length];
     setBusy(true);
     try {
-      await controller.createLayer(trimmed, color, borderColor, geomType);
-      setName('');
+      const created = await controller.createLayer(trimmed, color, borderColor, geomType);
+      if (created) setName('');
     } finally {
       setBusy(false);
     }
