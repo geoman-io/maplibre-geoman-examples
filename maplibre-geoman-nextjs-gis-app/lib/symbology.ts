@@ -97,8 +97,10 @@ export const matchesFilter = (
   schema?: LayerSchema | null,
 ): boolean => {
   if (!filter?.field || typeof filter.value !== 'string') return true;
-  const raw = metadata?.[filter.field];
-  if (raw == null || raw === '') return false;
+  // A missing key must not fall through to Object.prototype (`toString`, …).
+  if (!metadata || typeof metadata !== 'object' || !Object.hasOwn(metadata, filter.field)) return false;
+  const raw = metadata[filter.field];
+  if (typeof raw !== 'string' || raw === '') return false;
 
   const fields = Array.isArray(schema?.fields) ? schema.fields : [];
   const type = fields.find((field) => field.name === filter.field)?.type;

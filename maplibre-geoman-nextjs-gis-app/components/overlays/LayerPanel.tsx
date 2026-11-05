@@ -82,7 +82,7 @@ export default function LayerPanel({
   };
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = {};
+    const c: Record<string, number> = Object.create(null);
     for (const f of Object.values(features)) c[f.layerId] = (c[f.layerId] ?? 0) + 1;
     return c;
   }, [features]);
@@ -247,11 +247,11 @@ export default function LayerPanel({
                 </svg>
               </button>
               <button
-                title={`Edit schema${layer.schema?.fields.length ? ` (${layer.schema.fields.length} fields)` : ''}`}
+                title={`Edit schema${layer.schema?.fields?.length ? ` (${layer.schema.fields.length} fields)` : ''}`}
                 aria-label={`Edit schema for ${layer.name}`}
                 onClick={() => setSchemaLayer(layer)}
                 className={`transition-colors hover:text-blue-600 ${
-                  layer.schema?.fields.length ? 'text-blue-500' : 'text-zinc-300'
+                  layer.schema?.fields?.length ? 'text-blue-500' : 'text-zinc-300'
                 }`}
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

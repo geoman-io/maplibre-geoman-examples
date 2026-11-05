@@ -36,6 +36,22 @@ export function translateGeometry<G extends Geometry>(geometry: G, dx: number, d
   return { ...geometry, coordinates: shift((geometry as { coordinates: unknown }).coordinates) } as G;
 }
 
+/** A small paste offset that still fits in the world, or null if every nudge
+ *  pushes a vertex past ±180/±90. */
+export function nudgeGeometry(geometry: Geometry): Geometry | null {
+  const deltas: Array<[number, number]> = [
+    [0.05, -0.05],
+    [-0.05, 0.05],
+    [0.05, 0.05],
+    [-0.05, -0.05],
+  ];
+  for (const [dx, dy] of deltas) {
+    const next = translateGeometry(geometry, dx, dy);
+    if (geometryProblem(next) === null) return next;
+  }
+  return null;
+}
+
 /** Bounding box of a GeoJSON feature, or null if it has no coordinates. */
 export function featureBounds(feature: Feature): Bounds | null {
   let minX = Infinity;

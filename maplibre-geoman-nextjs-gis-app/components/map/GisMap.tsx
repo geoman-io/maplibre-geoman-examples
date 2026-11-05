@@ -6,7 +6,7 @@ import { Geoman } from '@geoman-io/maplibre-geoman-pro';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@geoman-io/maplibre-geoman-pro/dist/maplibre-geoman.css';
 import mapStyle from '@/lib/maplibre-style';
-import { useConfig } from '@/hooks/useConfig';
+import { clampSnapTolerance, useConfig } from '@/hooks/useConfig';
 
 // MapLibre GL JS v6 no longer resolves its own web worker once bundled, so the app must
 // point it at one before creating a map. `new URL(..., import.meta.url)` is the
@@ -33,7 +33,7 @@ function buildGmOptions(): NonNullable<ConstructorParameters<typeof Geoman>[1]> 
       // (features are keyed by id in the DB with a (userId, id) primary key).
       idGenerator: () => crypto.randomUUID(),
       // Snap distance + schema/geometry enforcement come from the persisted config.
-      snapDistance: c.snapTolerance,
+      snapDistance: clampSnapTolerance(c.snapTolerance),
       validateSchema: c.validateSchema,
       validateGeometry: c.validateGeometry,
     },

@@ -22,10 +22,12 @@ export default function LayerStyleModal({
     () => Object.values(features).filter((f) => f.layerId === layer.id),
     [features, layer.id],
   );
-  const fields = layer.schema?.fields ?? [];
+  const fields = Array.isArray(layer.schema?.fields) ? layer.schema.fields : [];
   const numericFields = fields.filter((f) => f.type === 'number' || f.type === 'integer');
-  const enumOptions = (name: string) =>
-    fields.find((f) => f.name === name && f.type === 'enum')?.options;
+  const enumOptions = (name: string) => {
+    const options = fields.find((f) => f.name === name && f.type === 'enum')?.options;
+    return Array.isArray(options) ? options : undefined;
+  };
 
   const [tab, setTab] = useState<Tab>('symbology');
   const [sym, setSym] = useState<Symbology>(layer.style?.symbology ?? { mode: 'single' });
@@ -199,7 +201,7 @@ export default function LayerStyleModal({
 
               {sym.mode === 'categorized' && (
                 <ul className="space-y-1">
-                  {sym.categories.map((c, i) => (
+                  {(Array.isArray(sym.categories) ? sym.categories : []).map((c, i) => (
                     <li key={c.value} className="flex items-center gap-2 text-sm">
                       <input
                         type="color"
@@ -214,7 +216,7 @@ export default function LayerStyleModal({
                       <span className="truncate text-zinc-700">{c.value}</span>
                     </li>
                   ))}
-                  {sym.categories.length === 0 && (
+                  {(Array.isArray(sym.categories) ? sym.categories : []).length === 0 && (
                     <li className="text-xs text-zinc-400">No values found in this field.</li>
                   )}
                 </ul>
@@ -231,7 +233,7 @@ export default function LayerStyleModal({
                     />
                     <span className="text-zinc-700">&lt; {sym.stops[0]?.value ?? '—'}</span>
                   </li>
-                  {sym.stops.map((s, i) => (
+                  {(Array.isArray(sym.stops) ? sym.stops : []).map((s, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm">
                       <input
                         type="color"
@@ -396,7 +398,10 @@ export default function LayerStyleModal({
                     min={0}
                     max={24}
                     value={minZoom}
-                    onChange={(e) => setMinZoom(Math.max(0, Math.min(24, Number(e.target.value))))}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      setMinZoom(Number.isFinite(n) ? Math.max(0, Math.min(24, n)) : 0);
+                    }}
                     className={`${input} w-full`}
                   />
                 </label>
@@ -407,7 +412,10 @@ export default function LayerStyleModal({
                     min={0}
                     max={24}
                     value={maxZoom}
-                    onChange={(e) => setMaxZoom(Math.max(0, Math.min(24, Number(e.target.value))))}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      setMaxZoom(Number.isFinite(n) ? Math.max(0, Math.min(24, n)) : 24);
+                    }}
                     className={`${input} w-full`}
                   />
                 </label>
