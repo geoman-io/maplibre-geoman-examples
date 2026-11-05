@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { fillExpression, graduate, matchesFilter } from './symbology.ts';
 import { geometryProblem, isUsableFeature, stringMetadata } from './geojson-guard.ts';
 import { featureBounds, inferShape, parseGeoJson, translateGeometry } from './io.ts';
 import { measureFeature } from './measure.ts';
@@ -64,6 +65,29 @@ test('parse, translate, measure, and simplify do not throw on fuzzed input', () 
     simplifyFeature({ type: 'Feature', properties: {}, geometry: broken }),
   );
   assert.equal(inferShape(broken), null);
+});
+
+test('saved styles and deep geometry do not throw', () => {
+  assert.equal(
+    matchesFilter({ a: 'hello' }, { field: 'a', op: 'contains', value: undefined as never }),
+    true,
+  );
+  assert.doesNotThrow(() =>
+    matchesFilter({ a: '1' }, { field: 'a', op: '>', value: '1' }, { fields: null as never }),
+  );
+  assert.doesNotThrow(() =>
+    fillExpression({ mode: 'categorized', field: 'a', categories: null as never, fallback: '#000' }),
+  );
+  assert.doesNotThrow(() => graduate([], 'a', Number.POSITIVE_INFINITY, undefined as never));
+
+  const nested = { type: 'Polygon', coordinates: [] as unknown[] };
+  let cursor = nested.coordinates;
+  for (let i = 0; i < 30; i++) {
+    const next: unknown[] = [];
+    cursor.push(next);
+    cursor = next;
+  }
+  assert.equal(geometryProblem(nested), 'non-finite coordinate');
 });
 
 test('metadata keeps only scalar values', () => {

@@ -39,7 +39,10 @@ export default function Locator({ controller }: { controller: EditorController }
       );
       const hits = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
       if (hits.length) {
-        controller.flyTo(Number(hits[0].lon), Number(hits[0].lat), 13);
+        const lon = Number(hits[0].lon);
+        const lat = Number(hits[0].lat);
+        if (Number.isFinite(lon) && Number.isFinite(lat)) controller.flyTo(lon, lat, 13);
+        else setNote('No results');
         setNote(hits[0].display_name);
       } else {
         setNote('No results');
