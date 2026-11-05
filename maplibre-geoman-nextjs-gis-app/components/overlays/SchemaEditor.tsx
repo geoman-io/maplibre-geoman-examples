@@ -28,9 +28,15 @@ export default function SchemaEditor({
   const remove = (i: number) => setFields((fs) => fs.filter((_, idx) => idx !== i));
 
   const save = async () => {
+    const seen = new Set<string>();
     const clean = fields
-      .map((f) => ({ ...f, name: f.name.trim() }))
-      .filter((f) => f.name);
+      .map((f) => ({
+        ...f,
+        name: f.name.trim(),
+        min: typeof f.min === 'number' && Number.isFinite(f.min) ? f.min : undefined,
+        max: typeof f.max === 'number' && Number.isFinite(f.max) ? f.max : undefined,
+      }))
+      .filter((f) => f.name && !seen.has(f.name) && seen.add(f.name));
     setSaving(true);
     try {
       await controller.setLayerSchema(layer, clean.length ? { fields: clean } : null);

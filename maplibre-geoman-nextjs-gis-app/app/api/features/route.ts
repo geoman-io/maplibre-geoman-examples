@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { feature, layer } from '@/lib/db/schema';
 import { badRequest, getUser, notFound, unauthorized } from '@/lib/api';
-import { geometryProblem, MAX_ID_LENGTH } from '@/lib/geojson-guard';
+import { geometryFits, geometryProblem, MAX_ID_LENGTH } from '@/lib/geojson-guard';
 
 export async function GET(req: Request) {
   const user = await getUser();
@@ -20,7 +20,10 @@ export async function GET(req: Request) {
 }
 
 const idSchema = z.string().trim().min(1).max(MAX_ID_LENGTH);
-const metadataSchema = z.record(z.string().max(120), z.string().max(2000)).optional();
+const metadataSchema = z
+  .record(z.string().max(120), z.string().max(2000))
+  .refine((metadata) => Object.keys(metadata).length <= 100, { message: 'Too many attributes' })
+  .optional();
 const geojsonSchema = z
   .object({
     type: z.literal('Feature'),
@@ -29,6 +32,9 @@ const geojsonSchema = z
   })
   .refine((feature) => geometryProblem(feature.geometry) === null, {
     message: 'Geometry is empty, non-finite, or not a drawable shape',
+  })
+  .refine((feature) => JSON.stringify(feature.properties ?? {}).length <= 20_000, {
+    message: 'Feature properties are too large',
   });
 
 const upsertSchema = z.object({
@@ -49,10 +55,13 @@ export async function POST(req: Request) {
 
   // Ensure the target layer belongs to the caller before writing.
   const [owned] = await db
-    .select({ id: layer.id })
+    .select({ id: layer.id, geometryType: layer.geometryType })
     .from(layer)
     .where(and(eq(layer.id, data.layerId), eq(layer.userId, user.id)));
   if (!owned) return notFound();
+  if (!geometryFits(owned.geometryType, data.geojson.geometry)) {
+    return badRequest('Geometry does not match the layer');
+  }
 
   const [saved] = await db
     .insert(feature)

@@ -80,6 +80,7 @@ export default function AttributeTable({
 
   const onImport = async (file: File) => {
     if (!activeLayerId) return;
+    if (file.size > 8_000_000) return;
     try {
       const fc = parseGeoJson(await file.text());
       await controller.importGeoJson(activeLayerId, fc);
