@@ -35,11 +35,10 @@ function Editor({
   layer: LayerDTO | undefined;
 }) {
   const schema = layer?.schema ?? null;
-  const [values, setValues] = useState<Record<string, string>>(() => ({ ...feature.metadata }));
+  const metadata = feature.metadata ?? {};
+  const [values, setValues] = useState<Record<string, string>>(() => ({ ...metadata }));
   const [extra, setExtra] = useState<Array<{ key: string; value: string }>>(() =>
-    schema
-      ? []
-      : Object.entries(feature.metadata).map(([key, value]) => ({ key, value })),
+    schema ? [] : Object.entries(metadata).map(([key, value]) => ({ key, value: String(value) })),
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);

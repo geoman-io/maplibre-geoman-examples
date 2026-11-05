@@ -11,7 +11,7 @@ import type * as maplibregl from 'maplibre-gl';
 import type { Feature } from 'geojson';
 import type { FeatureCollection } from 'geojson';
 import { useEditorStore } from '@/hooks/useEditorStore';
-import { DEFAULT_CONFIG, type Config } from '@/hooks/useConfig';
+import { clampSnapTolerance, DEFAULT_CONFIG, type Config } from '@/hooks/useConfig';
 import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
 import { geometryProblem, isUsableFeature, stringMetadata } from '@/lib/geojson-guard';
@@ -36,7 +36,15 @@ const geoJsonFor = (layerId: string) => {
   const layer = store().layers.find((l) => l.id === layerId);
   const schema = layer?.schema ?? null;
   return featuresOf(layerId)
-    .filter((row) => geometryProblem((row.geojson as Feature | undefined)?.geometry) === null)
+    .filter((row) => {
+      const geometry = (row.geojson as Feature | undefined)?.geometry;
+      if (geometryProblem(geometry) !== null) return false;
+      const shape = inferShape(geometry);
+      if (!layer?.geometryType) return shape != null;
+      if (layer.geometryType === 'point') return shape === 'marker';
+      if (layer.geometryType === 'line') return shape === 'line';
+      return shape === 'polygon';
+    })
     .filter((row) => matchesFilter(row.metadata ?? {}, layer?.style?.filter, schema))
     .map((row) => toGeoJson(row, schema));
 };
@@ -249,7 +257,7 @@ export class EditorController {
       metadata: {},
     });
     store().upsertFeature(dto);
-    this.gm.dataLayers.setData(layerId, geoJsonFor(layerId));
+    this.pushLayerData(layerId);
     store().setSelectedFeature(id);
   }
 
@@ -337,7 +345,7 @@ export class EditorController {
       ...(layer.schema ? { schema: layer.schema } : {}),
       ...(layer.geometryType ? { geometryTypes: [layer.geometryType] } : {}),
     });
-    this.gm.dataLayers.setData(layer.id, geoJsonFor(layer.id));
+    this.pushLayerData(layer.id);
     this.applyZoomRange(layer);
   }
 
@@ -392,7 +400,7 @@ export class EditorController {
     await this.gm.dataLayers.setEditable(id, true);
     // setEditable(true) only flips registration; load this layer's features
     // from our authoritative store into the editable featureStore.
-    this.gm.dataLayers.setData(id, geoJsonFor(id));
+    this.pushLayerData(id);
     await this.gm.dataLayers.setActive(id);
     store().setActiveLayer(id);
   }
@@ -478,7 +486,7 @@ export class EditorController {
     this.gm.dataLayers.setStyle(layer.id, compileStyle(updated));
     this.applyZoomRange(updated);
     // The filter changes which features render — re-push the (filtered) data.
-    if (filterChanged) this.gm.dataLayers.setData(layer.id, geoJsonFor(layer.id));
+    if (filterChanged) this.pushLayerData(layer.id);
     await api.updateLayer(layer.id, { style });
   }
 
@@ -504,7 +512,7 @@ export class EditorController {
   /** Import a GeoJSON FeatureCollection into a layer (persist + render). */
   async importGeoJson(layerId: string, fc: FeatureCollection) {
     const layer = store().layers.find((item) => item.id === layerId);
-    const accepted = fc.features.filter((feature) => {
+    const accepted = fc.features.slice(0, 2000).filter((feature) => {
       if (!isUsableFeature(feature)) return false;
       const shape = inferShape(feature.geometry);
       if (!shape) return false;
@@ -530,7 +538,7 @@ export class EditorController {
       )
     ).filter((dto) => dto != null);
     for (const dto of dtos) store().upsertFeature(dto);
-    this.gm.dataLayers.setData(layerId, geoJsonFor(layerId));
+    this.pushLayerData(layerId);
   }
 
   /** Fit the map to a feature's bounds. */
@@ -558,8 +566,23 @@ export class EditorController {
 
   private fit(bounds: [[number, number], [number, number]] | null, maxZoom: number) {
     if (!bounds) return;
-    const map = this.map();
-    map.fitBounds(bounds, { padding: 96, maxZoom, duration: 600 });
+    const [[minX, minY], [maxX, maxY]] = bounds;
+    if (![minX, minY, maxX, maxY].every(Number.isFinite)) return;
+    if (maxX - minX < 1e-9 && maxY - minY < 1e-9) {
+      this.flyTo((minX + maxX) / 2, (minY + maxY) / 2, maxZoom);
+      return;
+    }
+    this.map().fitBounds(bounds, { padding: 96, maxZoom, duration: 600 });
+  }
+
+  private pushLayerData(layerId: string) {
+    try {
+      void Promise.resolve(this.gm.dataLayers.setData(layerId, geoJsonFor(layerId))).catch((error) => {
+        console.warn('GIS: layer data was not applied', layerId, error);
+      });
+    } catch (error) {
+      console.warn('GIS: layer data was not applied', layerId, error);
+    }
   }
 
   // --- Behaviour config (settings modal) -----------------------------------
@@ -618,7 +641,7 @@ export class EditorController {
       validateGeometry?: boolean;
       gridSnap?: { size: number } | null;
     };
-    top.snapDistance = config.snapTolerance;
+    top.snapDistance = clampSnapTolerance(config.snapTolerance);
     top.validateSchema = config.validateSchema;
     top.validateGeometry = config.validateGeometry;
     top.gridSnap = config.gridSnap ? { size: GRID_SIZE } : null;

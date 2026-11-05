@@ -35,6 +35,12 @@ export type Config = {
   validateGeometry: boolean;
 };
 
+export function clampSnapTolerance(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return 18;
+  return Math.min(80, Math.max(1, n));
+}
+
 export const DEFAULT_CONFIG: Config = {
   crossLayerSelect: true,
   hoverCursor: true,

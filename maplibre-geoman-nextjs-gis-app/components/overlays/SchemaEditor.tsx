@@ -17,7 +17,9 @@ export default function SchemaEditor({
   controller: EditorController;
   onClose: () => void;
 }) {
-  const [fields, setFields] = useState<SchemaField[]>(() => layer.schema?.fields ?? []);
+  const [fields, setFields] = useState<SchemaField[]>(() =>
+    Array.isArray(layer.schema?.fields) ? layer.schema.fields : [],
+  );
   const [saving, setSaving] = useState(false);
 
   const patch = (i: number, p: Partial<SchemaField>) =>

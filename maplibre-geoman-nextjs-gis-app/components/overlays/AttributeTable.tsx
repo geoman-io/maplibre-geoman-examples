@@ -33,7 +33,9 @@ export default function AttributeTable({
   const columns = useMemo(() => {
     const schemaNames = (layer?.schema?.fields ?? []).map((f) => f.name);
     const keys = new Set<string>(schemaNames);
-    for (const f of rows) for (const k of Object.keys(f.metadata)) keys.add(k);
+    for (const f of rows) {
+      for (const k of Object.keys(f.metadata ?? {})) keys.add(k);
+    }
     const extra = [...keys].filter((k) => !schemaNames.includes(k)).sort();
     return [...schemaNames, ...extra];
   }, [rows, layer]);
@@ -45,21 +47,21 @@ export default function AttributeTable({
     return rows.filter(
       (f) =>
         f.id.toLowerCase().includes(q) ||
-        Object.values(f.metadata).some((v) => v.toLowerCase().includes(q)),
+        Object.values(f.metadata ?? {}).some((v) => String(v).toLowerCase().includes(q)),
     );
   }, [rows, query]);
 
   const commit = (id: string, key: string, value: string) => {
     const f = features[id];
-    if (!f || (f.metadata[key] ?? '') === value) return;
-    controller.updateFeatureMetadata(id, { ...f.metadata, [key]: value });
+    if (!f || ((f.metadata ?? {})[key] ?? '') === value) return;
+    controller.updateFeatureMetadata(id, { ...(f.metadata ?? {}), [key]: value });
   };
 
   const addField = () => {
     const k = newField.trim();
     if (!k || columns.includes(k) || rows.length === 0) return;
     const f = rows[0];
-    controller.updateFeatureMetadata(f.id, { ...f.metadata, [k]: '' });
+    controller.updateFeatureMetadata(f.id, { ...(f.metadata ?? {}), [k]: '' });
     setNewField('');
   };
 
@@ -196,7 +198,7 @@ export default function AttributeTable({
                     <td key={c} className="px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
                       {field?.type === 'enum' ? (
                         <select
-                          defaultValue={f.metadata[c] ?? ''}
+                          defaultValue={(f.metadata ?? {})[c] ?? ''}
                           onChange={(e) => commit(f.id, c, e.target.value)}
                           className={cls}
                         >
@@ -210,7 +212,7 @@ export default function AttributeTable({
                       ) : (
                         <input
                           type={field?.type === 'number' || field?.type === 'integer' ? 'number' : 'text'}
-                          defaultValue={f.metadata[c] ?? ''}
+                          defaultValue={(f.metadata ?? {})[c] ?? ''}
                           onBlur={(e) => commit(f.id, c, e.target.value)}
                           className={cls}
                         />
