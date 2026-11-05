@@ -39,17 +39,49 @@ export const layerSchemaShape = z
             .optional(),
         }),
       )
-      .max(40),
+      .max(40)
+      .refine((fields) => new Set(fields.map((field) => field.name)).size === fields.length, {
+        message: 'Field names must be unique',
+      }),
   })
   .nullable();
 
-// Presentation config (symbology / labels / filter) — a jsonb blob the client
-// owns; bounded to the known keys, values left loose (round-trips to the same user).
+// Presentation config. Kept to known shapes so a saved style cannot crash
+// hydrate or produce a MapLibre expression the renderer rejects.
+const filterShape = z.object({
+  field: z.string().trim().min(1).max(60),
+  op: z.enum(['=', '!=', '>', '>=', '<', '<=', 'contains']),
+  value: z.string().max(2000),
+});
+
+const symbologyShape = z.discriminatedUnion('mode', [
+  z.object({ mode: z.literal('single') }),
+  z.object({
+    mode: z.literal('categorized'),
+    field: z.string().trim().min(1).max(60),
+    categories: z.array(z.object({ value: z.string().max(200), color: hex })).max(100),
+    fallback: hex,
+  }),
+  z.object({
+    mode: z.literal('graduated'),
+    field: z.string().trim().min(1).max(60),
+    base: hex,
+    stops: z.array(z.object({ value: finite, color: hex })).max(24),
+  }),
+]);
+
 export const layerStyleShape = z
   .object({
-    symbology: z.any().optional(),
-    labels: z.any().optional(),
-    filter: z.any().optional(),
+    symbology: symbologyShape.optional(),
+    labels: z
+      .object({
+        field: z.string().trim().min(1).max(60),
+        size: finite.min(1).max(64).optional(),
+        color: hex.optional(),
+        haloColor: hex.optional(),
+      })
+      .optional(),
+    filter: filterShape.optional(),
     minZoom: finite.min(0).max(24).optional(),
     maxZoom: finite.min(0).max(24).optional(),
   })

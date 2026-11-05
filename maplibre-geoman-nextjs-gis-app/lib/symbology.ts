@@ -18,7 +18,7 @@ const fieldValues = (features: Array<FeatureDTO>, field: string): Array<string> 
 
 /** Distinct string values of a metadata field across a layer's features. */
 export const uniqueValues = (features: Array<FeatureDTO>, field: string): Array<string> =>
-  [...new Set(fieldValues(features, field))].sort();
+  [...new Set(fieldValues(features.filter((feature) => feature?.metadata), field))].sort();
 
 /** Build a categorized symbology: one palette colour per distinct value. */
 export const categorize = (
@@ -39,20 +39,24 @@ export const graduate = (
   features: Array<FeatureDTO>,
   field: string,
   classes: number,
-  ramp: Array<string>,
+  ramp: Array<string> = RAMPS.Blue,
 ): Extract<Symbology, { mode: 'graduated' }> => {
-  const nums = fieldValues(features, field)
+  const buckets = Math.max(2, Math.min(12, Math.floor(classes) || 2));
+  const colors = ramp.length > 0 ? ramp : RAMPS.Blue;
+  const nums = fieldValues(features.filter((feature) => feature?.metadata), field)
     .map(Number)
     .filter((n) => Number.isFinite(n))
     .sort((a, b) => a - b);
   const min = nums[0] ?? 0;
   const max = nums[nums.length - 1] ?? 0;
-  const step = (max - min) / classes;
+  const step = (max - min) / buckets;
   const colorAt = (i: number) =>
-    ramp[Math.min(ramp.length - 1, Math.round((i / Math.max(1, classes - 1)) * (ramp.length - 1)))];
+    colors[Math.min(colors.length - 1, Math.round((i / Math.max(1, buckets - 1)) * (colors.length - 1)))];
   const stops: Array<{ value: number; color: string }> = [];
-  for (let i = 1; i < classes; i++) {
-    stops.push({ value: Number((min + step * i).toFixed(4)), color: colorAt(i) });
+  for (let i = 1; i < buckets; i++) {
+    const value = Number((min + step * i).toFixed(4));
+    if (stops.some((stop) => stop.value === value)) continue;
+    stops.push({ value, color: colorAt(i) });
   }
   return { mode: 'graduated', field, base: colorAt(0), stops };
 };
@@ -61,17 +65,25 @@ export const graduate = (
  *  `undefined` for `single` (use the layer's flat colour). */
 export const fillExpression = (sym: Symbology): unknown => {
   if (sym.mode === 'categorized') {
+    const categories = Array.isArray(sym.categories) ? sym.categories : [];
     return {
       categorical: {
         field: sym.field,
-        categories: Object.fromEntries(sym.categories.map((c) => [c.value, c.color])),
-        fallback: sym.fallback,
+        categories: Object.fromEntries(
+          categories.filter((item) => item && typeof item.value === 'string').map((item) => [item.value, item.color]),
+        ),
+        fallback: sym.fallback || '#cbd5e1',
       },
     };
   }
   if (sym.mode === 'graduated') {
+    const stops = (Array.isArray(sym.stops) ? sym.stops : [])
+      .filter((stop) => stop && Number.isFinite(stop.value))
+      .sort((a, b) => a.value - b.value)
+      .filter((stop, index, all) => index === 0 || stop.value > all[index - 1].value);
+    if (stops.length === 0) return undefined;
     return {
-      step: { field: sym.field, base: sym.base, stops: sym.stops.map((s) => [s.value, s.color]) },
+      step: { field: sym.field, base: sym.base || '#cbd5e1', stops: stops.map((stop) => [stop.value, stop.color]) },
     };
   }
   return undefined;
@@ -84,11 +96,12 @@ export const matchesFilter = (
   filter: LayerFilter | undefined | null,
   schema?: LayerSchema | null,
 ): boolean => {
-  if (!filter?.field) return true;
-  const raw = metadata[filter.field];
+  if (!filter?.field || typeof filter.value !== 'string') return true;
+  const raw = metadata?.[filter.field];
   if (raw == null || raw === '') return false;
 
-  const type = schema?.fields.find((f) => f.name === filter.field)?.type;
+  const fields = Array.isArray(schema?.fields) ? schema.fields : [];
+  const type = fields.find((field) => field.name === filter.field)?.type;
   if (type === 'number' || type === 'integer') {
     const a = Number(raw);
     const b = Number(filter.value);

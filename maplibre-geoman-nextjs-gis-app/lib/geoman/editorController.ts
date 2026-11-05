@@ -36,8 +36,9 @@ const geoJsonFor = (layerId: string) => {
   const layer = store().layers.find((l) => l.id === layerId);
   const schema = layer?.schema ?? null;
   return featuresOf(layerId)
-    .filter((r) => matchesFilter(r.metadata, layer?.style?.filter, schema))
-    .map((r) => toGeoJson(r, schema));
+    .filter((row) => geometryProblem((row.geojson as Feature | undefined)?.geometry) === null)
+    .filter((row) => matchesFilter(row.metadata ?? {}, layer?.style?.filter, schema))
+    .map((row) => toGeoJson(row, schema));
 };
 
 /** Grid cell size for snap-to-grid, in degrees (~55 m of longitude at the equator). */
@@ -57,8 +58,8 @@ const coerceProps = (
   schema?: LayerSchema | null,
 ): Record<string, unknown> => {
   const out: Record<string, unknown> = { ...metadata };
-  for (const f of schema?.fields ?? []) {
-    const raw = metadata[f.name];
+  for (const f of Array.isArray(schema?.fields) ? schema.fields : []) {
+    const raw = metadata?.[f.name];
     if (raw == null || raw === '') continue;
     out[f.name] =
       f.type === 'number' || f.type === 'integer'
@@ -342,8 +343,10 @@ export class EditorController {
 
   /** Apply a layer's scale-dependent (zoom) visibility to its render layers. */
   private applyZoomRange(layer: LayerDTO) {
-    const min = layer.style?.minZoom ?? 0;
-    const max = layer.style?.maxZoom ?? 24;
+    const rawMin = Number.isFinite(layer.style?.minZoom) ? layer.style!.minZoom! : 0;
+    const rawMax = Number.isFinite(layer.style?.maxZoom) ? layer.style!.maxZoom! : 24;
+    const min = Math.min(rawMin, rawMax);
+    const max = Math.max(rawMin, rawMax);
     const map = this.map();
     const sourceId = `${SOURCE_PREFIX}${layer.id}`;
     for (const l of map.getStyle().layers ?? []) {
@@ -367,7 +370,7 @@ export class EditorController {
     if (!schema) return { valid: true, errors: [] };
     const props: Record<string, unknown> = {};
     for (const field of schema.fields) {
-      const raw = metadata[field.name];
+      const raw = metadata?.[field.name];
       if (raw == null || raw === '') continue;
       props[field.name] =
         field.type === 'number' || field.type === 'integer'
@@ -567,7 +570,9 @@ export class EditorController {
 
   /** Fly the map to a coordinate (locator / geocoder result). */
   flyTo(lng: number, lat: number, zoom = 14) {
-    this.map().flyTo({ center: [lng, lat], zoom, duration: 800 });
+    if (!Number.isFinite(lng) || !Number.isFinite(lat) || Math.abs(lng) > 180 || Math.abs(lat) > 90) return;
+    const nextZoom = Number.isFinite(zoom) ? Math.min(22, Math.max(0, zoom)) : 14;
+    this.map().flyTo({ center: [lng, lat], zoom: nextZoom, duration: 800 });
   }
 
   /** Switch the raster basemap in place, or hide it (`null`). Only swaps the

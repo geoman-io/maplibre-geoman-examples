@@ -26,15 +26,17 @@ export function isFinitePosition(value: unknown): value is Position {
   );
 }
 
-function walk(value: unknown, visit: (position: Position) => void): boolean {
-  if (!Array.isArray(value)) return false;
+function walk(value: unknown, visit: (position: Position) => void, depth = 0): boolean {
+  // A hostile import can nest arrays until the call stack dies. Real GeoJSON
+  // is at most a few levels deep.
+  if (depth > 8 || !Array.isArray(value)) return false;
   if (value.length === 0) return true;
   if (!Array.isArray(value[0])) {
     if (!isFinitePosition(value)) return false;
     visit(value);
     return true;
   }
-  return value.every((item) => walk(item, visit));
+  return value.every((item) => walk(item, visit, depth + 1));
 }
 
 function ringsAreClosed(rings: unknown): boolean {
