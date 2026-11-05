@@ -399,10 +399,14 @@ export class EditorController {
   /** Set a layer's attribute schema (typed fields) — persisted + applied to the
    *  engine so dataLayers.validate() can check feature attributes against it. */
   async setLayerSchema(layer: LayerDTO, schema: LayerSchema | null) {
-    const updated = { ...layer, schema };
-    store().upsertLayer(updated);
-    this.gm.dataLayers.setSchema(layer.id, (schema ?? { fields: [] }) as never);
-    await api.updateLayer(layer.id, { schema });
+    try {
+      const updated = { ...layer, schema };
+      store().upsertLayer(updated);
+      this.gm.dataLayers.setSchema(layer.id, (schema ?? { fields: [] }) as never);
+      await api.updateLayer(layer.id, { schema });
+    } catch (error) {
+      console.warn('GIS: schema was not saved', layer.id, error);
+    }
   }
 
   /** Validate a metadata map against the layer's schema via the engine. Coerces
@@ -505,49 +509,65 @@ export class EditorController {
   }
 
   async toggleVisibility(layer: LayerDTO) {
-    const next = !layer.visible;
-    // Hiding a layer whose feature is selected must deselect it — otherwise the
-    // selection outline / vertex markers linger on the now-invisible feature.
-    if (!next) {
-      const selId = store().selectedFeatureId;
-      if (selId && store().features[selId]?.layerId === layer.id) {
-        this.gm.features.setSelection([]);
-        store().setSelectedFeature(null);
+    try {
+      const next = !layer.visible;
+      // Hiding a layer whose feature is selected must deselect it — otherwise the
+      // selection outline / vertex markers linger on the now-invisible feature.
+      if (!next) {
+        const selId = store().selectedFeatureId;
+        if (selId && store().features[selId]?.layerId === layer.id) {
+          this.gm.features.setSelection([]);
+          store().setSelectedFeature(null);
+        }
       }
+      store().upsertLayer({ ...layer, visible: next });
+      this.gm.dataLayers.setVisibility(layer.id, next);
+      await api.updateLayer(layer.id, { visible: next });
+    } catch (error) {
+      console.warn('GIS: visibility was not saved', layer.id, error);
     }
-    store().upsertLayer({ ...layer, visible: next });
-    this.gm.dataLayers.setVisibility(layer.id, next);
-    await api.updateLayer(layer.id, { visible: next });
   }
 
   async applyColors(layer: LayerDTO, color: string, borderColor: string) {
-    const updated = { ...layer, color, borderColor };
-    store().upsertLayer(updated);
-    this.gm.dataLayers.setStyle(layer.id, compileStyle(updated));
-    await api.updateLayer(layer.id, { color, borderColor });
+    try {
+      const updated = { ...layer, color, borderColor };
+      store().upsertLayer(updated);
+      this.gm.dataLayers.setStyle(layer.id, compileStyle(updated));
+      await api.updateLayer(layer.id, { color, borderColor });
+    } catch (error) {
+      console.warn('GIS: colors were not saved', layer.id, error);
+    }
   }
 
   /** Apply + persist a layer's presentation config: thematic symbology
    *  (categorized/graduated fill), attribute labels, and definition query. */
   async setLayerStyle(layer: LayerDTO, style: LayerStyleConfig | null) {
-    const filterChanged =
-      JSON.stringify(layer.style?.filter ?? null) !== JSON.stringify(style?.filter ?? null);
-    const updated = { ...layer, style };
-    store().upsertLayer(updated);
-    this.gm.dataLayers.setStyle(layer.id, compileStyle(updated));
-    this.applyZoomRange(updated);
-    // The filter changes which features render — re-push the (filtered) data.
-    if (filterChanged) this.pushLayerData(layer.id);
-    await api.updateLayer(layer.id, { style });
+    try {
+      const filterChanged =
+        JSON.stringify(layer.style?.filter ?? null) !== JSON.stringify(style?.filter ?? null);
+      const updated = { ...layer, style };
+      store().upsertLayer(updated);
+      this.gm.dataLayers.setStyle(layer.id, compileStyle(updated));
+      this.applyZoomRange(updated);
+      // The filter changes which features render — re-push the (filtered) data.
+      if (filterChanged) this.pushLayerData(layer.id);
+      await api.updateLayer(layer.id, { style });
+    } catch (error) {
+      console.warn('GIS: style was not saved', layer.id, error);
+    }
   }
 
   async deleteLayer(layer: LayerDTO) {
-    await this.gm.dataLayers.remove(layer.id); // async: clears the featureStore
-    store().removeLayer(layer.id);
-    await api.deleteLayer(layer.id);
-    if (store().activeLayerId === null) {
-      const next = store().layers[0];
-      if (next) await this.setActiveLayer(next.id);
+    try {
+      await this.gm.dataLayers.remove(layer.id); // async: clears the featureStore
+      store().removeLayer(layer.id);
+      await api.deleteLayer(layer.id);
+      if (store().activeLayerId === null) {
+        const next = store().layers[0];
+        if (next) await this.setActiveLayer(next.id);
+      }
+    } catch (error) {
+      console.warn('GIS: layer was not deleted', layer.id, error);
     }
   }
 
