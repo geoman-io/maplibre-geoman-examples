@@ -78,14 +78,31 @@ export function downloadGeoJson(name: string, fc: FeatureCollection) {
 }
 
 /** Parse text into a FeatureCollection (accepts a Feature or a bare geometry). */
+function usable(feature: Feature): boolean {
+  const geometry = feature?.geometry as { type?: string; coordinates?: unknown } | null;
+  if (!geometry || geometry.coordinates == null) return false;
+  const walk = (value: unknown): boolean => {
+    if (!Array.isArray(value)) return false;
+    if (value.length === 0) return true;
+    if (typeof value[0] === 'number') {
+      return Number.isFinite(value[0]) && Number.isFinite(value[1]);
+    }
+    return value.every(walk);
+  };
+  return walk(geometry.coordinates);
+}
+
 export function parseGeoJson(text: string): FeatureCollection {
   const data = JSON.parse(text);
-  if (data.type === 'FeatureCollection') return data as FeatureCollection;
-  if (data.type === 'Feature') return { type: 'FeatureCollection', features: [data] };
-  if (typeof data.type === 'string') {
-    return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: data }] };
-  }
-  throw new Error('Not valid GeoJSON');
+  let features: Feature[] = [];
+  if (data.type === 'FeatureCollection') features = data.features ?? [];
+  else if (data.type === 'Feature') features = [data];
+  else if (typeof data.type === 'string') {
+    features = [{ type: 'Feature', properties: {}, geometry: data }];
+  } else throw new Error('Not valid GeoJSON');
+  const kept = features.filter(usable);
+  if (kept.length === 0) throw new Error('No usable features');
+  return { type: 'FeatureCollection', features: kept };
 }
 
 /** Keep only string-valued properties as the feature's metadata map. */

@@ -13,7 +13,7 @@
     "dev:fresh": "pnpm relink && pnpm dev"
   },
   "dependencies": {
-    "@geoman-io/maplibre-geoman-pro": "0.12.0",
+    "@geoman-io/maplibre-geoman-pro": "0.13.7",
     "@turf/boolean-intersects": "^7.3.5",
     "@turf/boolean-point-in-polygon": "^7.3.5",
     "@turf/buffer": "^7.3.5",
@@ -21,7 +21,7 @@
     "@turf/difference": "^7.3.5",
     "@turf/helpers": "^7.3.5",
     "@turf/simplify": "^7.3.5",
-    "maplibre-gl": "^6.10.0",
+    "maplibre-gl": "^6.16.0",
     "next": "16.2.9",
     "react": "19.2.7",
     "react-dom": "19.2.7",

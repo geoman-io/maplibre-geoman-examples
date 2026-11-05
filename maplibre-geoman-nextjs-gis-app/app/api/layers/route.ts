@@ -20,18 +20,26 @@ export async function GET() {
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
+const finite = z.number().finite();
+const int4 = z.number().int().min(-2_147_483_648).max(2_147_483_647);
+
 export const layerSchemaShape = z
   .object({
-    fields: z.array(
-      z.object({
-        name: z.string().min(1).max(60),
-        type: z.enum(['string', 'number', 'integer', 'boolean', 'enum']),
-        required: z.boolean().optional(),
-        min: z.number().optional(),
-        max: z.number().optional(),
-        options: z.array(z.object({ value: z.string(), label: z.string().optional() })).optional(),
-      }),
-    ),
+    fields: z
+      .array(
+        z.object({
+          name: z.string().trim().min(1).max(60),
+          type: z.enum(['string', 'number', 'integer', 'boolean', 'enum']),
+          required: z.boolean().optional(),
+          min: finite.optional(),
+          max: finite.optional(),
+          options: z
+            .array(z.object({ value: z.string().max(120), label: z.string().max(120).optional() }))
+            .max(50)
+            .optional(),
+        }),
+      )
+      .max(40),
   })
   .nullable();
 
@@ -42,18 +50,19 @@ export const layerStyleShape = z
     symbology: z.any().optional(),
     labels: z.any().optional(),
     filter: z.any().optional(),
-    minZoom: z.number().optional(),
-    maxZoom: z.number().optional(),
+    minZoom: finite.min(0).max(24).optional(),
+    maxZoom: finite.min(0).max(24).optional(),
   })
+  .refine((style) => JSON.stringify(style).length <= 20_000, { message: 'Style is too large' })
   .nullable();
 
 export const geometryTypeShape = z.enum(['point', 'line', 'polygon']).nullable();
 
 const createSchema = z.object({
-  name: z.string().min(1).max(120),
+  name: z.string().trim().min(1).max(120),
   color: hex.optional(),
   borderColor: hex.optional(),
-  sortOrder: z.number().int().optional(),
+  sortOrder: int4.optional(),
   schema: layerSchemaShape.optional(),
   geometryType: geometryTypeShape.optional(),
 });

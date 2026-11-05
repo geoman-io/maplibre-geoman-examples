@@ -4,12 +4,22 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { feature, layer } from '@/lib/db/schema';
 import { badRequest, getUser, notFound, unauthorized } from '@/lib/api';
+import { geometryProblem, MAX_ID_LENGTH } from '@/lib/geojson-guard';
 
 const patchSchema = z.object({
-  layerId: z.string().min(1).optional(),
-  shape: z.string().optional(),
-  geojson: z.record(z.string(), z.unknown()).optional(),
-  metadata: z.record(z.string(), z.string()).optional(),
+  layerId: z.string().trim().min(1).max(MAX_ID_LENGTH).optional(),
+  shape: z.string().max(40).optional(),
+  geojson: z
+    .object({
+      type: z.literal('Feature'),
+      geometry: z.unknown(),
+      properties: z.unknown().optional(),
+    })
+    .refine((feature) => geometryProblem(feature.geometry) === null, {
+      message: 'Geometry is empty, non-finite, or not a drawable shape',
+    })
+    .optional(),
+  metadata: z.record(z.string().max(120), z.string().max(2000)).optional(),
 });
 
 export async function PATCH(

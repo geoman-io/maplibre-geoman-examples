@@ -36,7 +36,13 @@ export function layoutPanels(roof: Feature, opts: LayoutOptions): Polygon[] {
   const stepU = panelU + opts.colGapM;
   const stepV = panelV + opts.rowGapM;
 
-  const c = centroid(placeable).geometry.coordinates as Position;
+  let c: Position;
+  try {
+    c = centroid(placeable).geometry.coordinates as Position;
+  } catch {
+    return [];
+  }
+  if (!Number.isFinite(c[0]) || !Number.isFinite(c[1])) return [];
   const frame = localFrame(c[0], c[1]);
 
   // Panel-space basis aligned to the roof azimuth: v = up-slope, u = across.

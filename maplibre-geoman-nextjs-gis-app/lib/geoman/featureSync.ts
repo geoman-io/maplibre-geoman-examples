@@ -2,6 +2,7 @@
 
 import type { Geoman, FeatureData } from '@geoman-io/maplibre-geoman-pro';
 import type { Feature } from 'geojson';
+import { stringMetadata } from '@/lib/geojson-guard';
 
 type ReadFeature = {
   id: string;
@@ -18,7 +19,7 @@ export function readFeatureData(fd: FeatureData): ReadFeature {
     id: String(fd.id),
     shape: (props.shape as string | undefined) ?? geojson.geometry?.type ?? null,
     geojson,
-    metadata: (props.metadata as Record<string, string> | undefined) ?? {},
+    metadata: stringMetadata(props.metadata),
   };
 }
 
