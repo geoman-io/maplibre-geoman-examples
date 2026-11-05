@@ -23,12 +23,17 @@ export default function SignInPanel() {
   const dev = async (mode: 'in' | 'up') => {
     setBusy(true);
     setError(null);
-    const res =
-      mode === 'up'
-        ? await signUp.email({ email, password, name: email.split('@')[0] })
-        : await signIn.email({ email, password });
-    setBusy(false);
-    if (res.error) setError(res.error.message ?? 'Authentication failed');
+    try {
+      const res =
+        mode === 'up'
+          ? await signUp.email({ email, password, name: email.split('@')[0] || 'User' })
+          : await signIn.email({ email, password });
+      if (res.error) setError(res.error.message ?? 'Authentication failed');
+    } catch {
+      setError('Authentication failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

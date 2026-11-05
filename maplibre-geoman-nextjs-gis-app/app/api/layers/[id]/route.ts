@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { layer } from '@/lib/db/schema';
-import { badRequest, getUser, notFound, unauthorized } from '@/lib/api';
+import { badRequest, getUser, notFound, payloadTooLarge, unauthorized } from '@/lib/api';
 import { geometryTypeShape, layerSchemaShape, layerStyleShape } from '@/app/api/layers/route';
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
@@ -27,6 +27,7 @@ export async function PATCH(
 ) {
   const user = await getUser();
   if (!user) return unauthorized();
+  if (payloadTooLarge(req)) return badRequest('Body too large');
   const { id } = await params;
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));

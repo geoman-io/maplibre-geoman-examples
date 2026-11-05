@@ -14,8 +14,8 @@ import { useEditorStore } from '@/hooks/useEditorStore';
 import { clampSnapTolerance, DEFAULT_CONFIG, type Config } from '@/hooks/useConfig';
 import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
-import { geometryProblem, isUsableFeature, stringMetadata } from '@/lib/geojson-guard';
-import { featureBounds, inferShape, translateGeometry } from '@/lib/io';
+import { geometryFits, geometryProblem, isUsableFeature, stringMetadata } from '@/lib/geojson-guard';
+import { featureBounds, inferShape, nudgeGeometry } from '@/lib/io';
 import { fillExpression, matchesFilter } from '@/lib/symbology';
 import { simplifyFeature } from '@/lib/simplify';
 import type {
@@ -67,14 +67,18 @@ const coerceProps = (
 ): Record<string, unknown> => {
   const out: Record<string, unknown> = { ...metadata };
   for (const f of Array.isArray(schema?.fields) ? schema.fields : []) {
-    const raw = metadata?.[f.name];
+    if (!Object.hasOwn(metadata ?? {}, f.name)) continue;
+    const raw = metadata[f.name];
     if (raw == null || raw === '') continue;
-    out[f.name] =
-      f.type === 'number' || f.type === 'integer'
-        ? Number(raw)
-        : f.type === 'boolean'
-          ? raw === 'true'
-          : raw;
+    if (f.type === 'number' || f.type === 'integer') {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) continue;
+      out[f.name] = f.type === 'integer' ? Math.trunc(n) : n;
+    } else if (f.type === 'boolean') {
+      out[f.name] = raw === 'true';
+    } else {
+      out[f.name] = raw;
+    }
   }
   return out;
 };
@@ -95,32 +99,38 @@ const toGeoJson = (row: FeatureDTO, schema?: LayerSchema | null): Feature => ({
 
 /** A LayerDTO's presentation as a Geoman data-layer style — flat colours, plus
  *  thematic symbology (categorized/graduated fill) and labels when configured. */
+const cssColor = (value: unknown, fallback: string): string =>
+  typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
+
 const compileStyle = (layer: LayerDTO): DataLayerStyle => {
   const sym = layer.style?.symbology;
   const fill =
     sym && sym.mode !== 'single' ? (fillExpression(sym) as StyleValue<string>) : undefined;
   const labels = layer.style?.labels;
+  const color = cssColor(layer.color, '#3b82f6');
+  const borderColor = cssColor(layer.borderColor, '#1d4ed8');
+  const labelSize = Number(labels?.size);
   return {
     polygon: {
-      fillColor: fill ?? layer.color,
+      fillColor: fill ?? color,
       fillOpacity: 0.3,
-      strokeColor: layer.borderColor,
+      strokeColor: borderColor,
       strokeWidth: 2,
     },
-    line: { color: layer.borderColor, width: 3 },
+    line: { color: borderColor, width: 3 },
     point: {
-      color: fill ?? layer.color,
+      color: fill ?? color,
       radius: 6,
-      strokeColor: layer.borderColor,
+      strokeColor: borderColor,
       strokeWidth: 2,
     },
     ...(labels?.field
       ? {
           label: {
             field: labels.field,
-            ...(labels.size ? { size: labels.size } : {}),
-            ...(labels.color ? { color: labels.color } : {}),
-            ...(labels.haloColor ? { haloColor: labels.haloColor } : {}),
+            ...(Number.isFinite(labelSize) && labelSize > 0 && labelSize <= 64 ? { size: labelSize } : {}),
+            ...(labels.color ? { color: cssColor(labels.color, '#111827') } : {}),
+            ...(labels.haloColor ? { haloColor: cssColor(labels.haloColor, '#ffffff') } : {}),
           },
         }
       : {}),
@@ -136,25 +146,38 @@ export class EditorController {
   constructor(private gm: Geoman) {}
 
   async hydrate() {
-    const [layers, features] = await Promise.all([api.listLayers(), api.listFeatures()]);
-    store().setLayers(layers);
-    store().setFeatures(features);
+    try {
+      const [layers, features] = await Promise.all([api.listLayers(), api.listFeatures()]);
+      store().setLayers(layers);
+      store().setFeatures(features);
 
-    // QGIS-style: exactly the active layer is "in editing" (a Geoman editable
-    // source — shows vertices, accepts edits). Every other layer is a display
-    // layer (its own custom style, no edit handles).
-    const active = layers[0] ?? null;
-    for (const layer of layers) {
-      this.addGeomanLayer(layer, layer.id === active?.id);
+      // QGIS-style: exactly the active layer is "in editing" (a Geoman editable
+      // source — shows vertices, accepts edits). Every other layer is a display
+      // layer (its own custom style, no edit handles).
+      const active = layers[0] ?? null;
+      for (const layer of layers) {
+        try {
+          this.addGeomanLayer(layer, layer.id === active?.id);
+        } catch (error) {
+          console.warn('GIS: skipped a layer during load', layer.id, error);
+        }
+      }
+      // Match the panel order (top of the list = rendered on top) — the engine
+      // stacks layers in add-order, so restack to put layers[0] on top.
+      this.restackLayers(layers.map((l) => l.id));
+      if (active) {
+        try {
+          this.gm.dataLayers.setActive(active.id);
+        } catch (error) {
+          console.warn('GIS: could not activate a layer', active.id, error);
+        }
+      }
+      store().setActiveLayer(active?.id ?? null);
+      this.wireEvents();
+    } finally {
+      // A failed request must not leave the spinner up forever.
+      store().setHydrated(true);
     }
-    // Match the panel order (top of the list = rendered on top) — the engine
-    // stacks layers in add-order, so restack to put layers[0] on top.
-    this.restackLayers(layers.map((l) => l.id));
-    if (active) await this.gm.dataLayers.setActive(active.id);
-    store().setActiveLayer(active?.id ?? null);
-
-    this.wireEvents();
-    store().setHydrated(true);
   }
 
   private wireEvents() {
@@ -238,27 +261,30 @@ export class EditorController {
   /** Paste the clipboard geometry as a new feature in the active layer, nudged
    *  slightly south-east so it doesn't land exactly on the original (Ctrl+V). */
   async paste() {
-    const clip = store().clipboard as Feature | null;
-    const layerId = store().activeLayerId;
-    if (!clip?.geometry || geometryProblem(clip.geometry) || !layerId) return;
-    const shape = inferShape(clip.geometry);
-    if (!shape) return;
-    const id = crypto.randomUUID();
-    const geojson: Feature = {
-      type: 'Feature',
-      properties: {},
-      geometry: translateGeometry(clip.geometry, 0.05, -0.05),
-    };
-    const dto = await api.upsertFeature({
-      id,
-      layerId,
-      shape,
-      geojson,
-      metadata: {},
-    });
-    store().upsertFeature(dto);
-    this.pushLayerData(layerId);
-    store().setSelectedFeature(id);
+    try {
+      const clip = store().clipboard as Feature | null;
+      const layerId = store().activeLayerId;
+      if (!clip?.geometry || geometryProblem(clip.geometry) || !layerId) return;
+      const layer = store().layers.find((item) => item.id === layerId);
+      const geometry = nudgeGeometry(clip.geometry);
+      if (!geometry || !geometryFits(layer?.geometryType, geometry)) return;
+      const shape = inferShape(geometry);
+      if (!shape) return;
+      const id = crypto.randomUUID();
+      const geojson: Feature = { type: 'Feature', properties: {}, geometry };
+      const dto = await api.upsertFeature({
+        id,
+        layerId,
+        shape,
+        geojson,
+        metadata: {},
+      });
+      store().upsertFeature(dto);
+      this.pushLayerData(layerId);
+      store().setSelectedFeature(id);
+    } catch {
+      // A rejected save (wrong layer, dateline, offline) must not reject Ctrl+V.
+    }
   }
 
   /** Delete the currently selected feature (Del). `deleteAndNotify` removes it
@@ -322,9 +348,13 @@ export class EditorController {
     if (!id) return null;
     const fd = this.gm.features.findEditableFeature(id);
     if (!fd) return null;
-    const wkt = geometryToWkt(fd.getGeoJson().geometry);
-    await navigator.clipboard?.writeText(wkt);
-    return wkt;
+    try {
+      const wkt = geometryToWkt(fd.getGeoJson().geometry);
+      await navigator.clipboard?.writeText(wkt);
+      return wkt;
+    } catch {
+      return null;
+    }
   }
 
   async deleteSelected() {
@@ -342,8 +372,12 @@ export class EditorController {
       editable,
       visible: layer.visible,
       style: compileStyle(layer),
-      ...(layer.schema ? { schema: layer.schema } : {}),
-      ...(layer.geometryType ? { geometryTypes: [layer.geometryType] } : {}),
+      ...(Array.isArray(layer.schema?.fields) ? { schema: layer.schema } : {}),
+      ...(layer.geometryType === 'point' ||
+      layer.geometryType === 'line' ||
+      layer.geometryType === 'polygon'
+        ? { geometryTypes: [layer.geometryType] }
+        : {}),
     });
     this.pushLayerData(layer.id);
     this.applyZoomRange(layer);
@@ -357,7 +391,7 @@ export class EditorController {
     const max = Math.max(rawMin, rawMax);
     const map = this.map();
     const sourceId = `${SOURCE_PREFIX}${layer.id}`;
-    for (const l of map.getStyle().layers ?? []) {
+    for (const l of map.getStyle()?.layers ?? []) {
       if ((l as { source?: string }).source === sourceId) map.setLayerZoomRange(l.id, min, max);
     }
   }
@@ -375,17 +409,21 @@ export class EditorController {
    *  the string metadata to the field's declared type first. */
   validateMetadata(layerId: string, metadata: Record<string, string>): SchemaValidationResult {
     const schema = store().layers.find((l) => l.id === layerId)?.schema;
-    if (!schema) return { valid: true, errors: [] };
+    if (!schema || !Array.isArray(schema.fields)) return { valid: true, errors: [] };
     const props: Record<string, unknown> = {};
     for (const field of schema.fields) {
-      const raw = metadata?.[field.name];
+      if (!Object.hasOwn(metadata ?? {}, field.name)) continue;
+      const raw = metadata[field.name];
       if (raw == null || raw === '') continue;
-      props[field.name] =
-        field.type === 'number' || field.type === 'integer'
-          ? Number(raw)
-          : field.type === 'boolean'
-            ? raw === 'true'
-            : raw;
+      if (field.type === 'number' || field.type === 'integer') {
+        const n = Number(raw);
+        if (!Number.isFinite(n)) continue;
+        props[field.name] = field.type === 'integer' ? Math.trunc(n) : n;
+      } else if (field.type === 'boolean') {
+        props[field.name] = raw === 'true';
+      } else {
+        props[field.name] = raw;
+      }
     }
     return this.gm.dataLayers.validate(layerId, props);
   }
@@ -395,14 +433,18 @@ export class EditorController {
     if (prev === id) return;
     store().setSelectedFeature(null);
 
-    // Flip kinds in place (engine handles marker cleanup + registration).
-    if (prev) await this.gm.dataLayers.setEditable(prev, false);
-    await this.gm.dataLayers.setEditable(id, true);
-    // setEditable(true) only flips registration; load this layer's features
-    // from our authoritative store into the editable featureStore.
-    this.pushLayerData(id);
-    await this.gm.dataLayers.setActive(id);
-    store().setActiveLayer(id);
+    try {
+      // Flip kinds in place (engine handles marker cleanup + registration).
+      if (prev) await this.gm.dataLayers.setEditable(prev, false);
+      await this.gm.dataLayers.setEditable(id, true);
+      // setEditable(true) only flips registration; load this layer's features
+      // from our authoritative store into the editable featureStore.
+      this.pushLayerData(id);
+      this.gm.dataLayers.setActive(id);
+      store().setActiveLayer(id);
+    } catch (error) {
+      console.warn('GIS: could not switch layer', id, error);
+    }
   }
 
   async createLayer(
@@ -411,17 +453,22 @@ export class EditorController {
     borderColor: string,
     geometryType: GeometryType | null = null,
   ) {
-    const layer = await api.createLayer({
-      name,
-      color,
-      borderColor,
-      sortOrder: store().layers.length,
-      geometryType,
-    });
-    store().upsertLayer(layer);
-    this.addGeomanLayer(layer, false); // added as display, then promoted
-    await this.setActiveLayer(layer.id);
-    return layer;
+    try {
+      const layer = await api.createLayer({
+        name,
+        color,
+        borderColor,
+        sortOrder: store().layers.length,
+        geometryType,
+      });
+      store().upsertLayer(layer);
+      this.addGeomanLayer(layer, false); // added as display, then promoted
+      await this.setActiveLayer(layer.id);
+      return layer;
+    } catch (error) {
+      console.warn('GIS: layer was not created', error);
+      return null;
+    }
   }
 
   /**
@@ -440,7 +487,11 @@ export class EditorController {
 
     store().setLayers(reordered);
     this.restackLayers(orderedIds);
-    await Promise.all(reordered.map((l) => api.updateLayer(l.id, { sortOrder: l.sortOrder })));
+    await Promise.all(reordered.map((l) => api.updateLayer(l.id, { sortOrder: l.sortOrder }))).catch(
+      (error) => {
+        console.warn('GIS: layer order was not saved', error);
+      },
+    );
   }
 
   /**
@@ -502,11 +553,15 @@ export class EditorController {
 
   /** Edit a feature's metadata (attribute table / metadata editor). */
   async updateFeatureMetadata(id: string, metadata: Record<string, string>) {
-    const fd = findFeature(this.gm, id);
-    await fd?.updateProperties({ metadata });
-    const f = store().features[id];
-    if (f) store().upsertFeature({ ...f, metadata });
-    await api.updateFeature(id, { metadata });
+    try {
+      const fd = findFeature(this.gm, id);
+      await fd?.updateProperties({ metadata });
+      const f = store().features[id];
+      if (f) store().upsertFeature({ ...f, metadata });
+      await api.updateFeature(id, { metadata });
+    } catch (error) {
+      console.warn('GIS: attributes were not saved', id, error);
+    }
   }
 
   /** Import a GeoJSON FeatureCollection into a layer (persist + render). */
@@ -616,7 +671,7 @@ export class EditorController {
 
   /** Render-layer ids of every data layer (for queryRenderedFeatures). */
   private dataLayerRenderIds(): string[] {
-    return (this.map().getStyle().layers ?? [])
+    return (this.map().getStyle()?.layers ?? [])
       .filter((l) => (l as { source?: string }).source?.startsWith(SOURCE_PREFIX))
       .map((l) => l.id);
   }
@@ -648,7 +703,10 @@ export class EditorController {
     this.setCrossLayerSelect(config.crossLayerSelect);
     // The engine's mode enable/disable is async; firing several at once races.
     // Queue them so each runs to completion and the latest config wins.
-    this.helperQueue = this.helperQueue.then(() => this.applyHelpers(config));
+    // A rejected helper must not wedge the queue — later toggles would never run.
+    this.helperQueue = this.helperQueue
+      .catch(() => {})
+      .then(() => this.applyHelpers(config));
   }
 
   private helperQueue: Promise<void> = Promise.resolve();
@@ -662,8 +720,12 @@ export class EditorController {
       ['auto_trace', config.tracing],
     ];
     for (const [name, on] of desired) {
-      if (this.gm.options.isModeEnabled('helper', name) === on) continue;
-      await (on ? this.gm.enableMode('helper', name) : this.gm.disableMode('helper', name));
+      try {
+        if (this.gm.options.isModeEnabled('helper', name) === on) continue;
+        await (on ? this.gm.enableMode('helper', name) : this.gm.disableMode('helper', name));
+      } catch (error) {
+        console.warn('GIS: helper mode failed', name, error);
+      }
     }
   }
 
@@ -677,7 +739,12 @@ export class EditorController {
     if (!on) return;
     this.hoverHandler = (e) => {
       const ids = this.dataLayerRenderIds();
-      const hits = ids.length ? map.queryRenderedFeatures(e.point, { layers: ids }) : [];
+      let hits: maplibregl.MapGeoJSONFeature[] = [];
+      try {
+        hits = ids.length ? map.queryRenderedFeatures(e.point, { layers: ids }) : [];
+      } catch {
+        return;
+      }
       const hit = hits.find(
         (h) =>
           this.config.crossLayerSelect ||
@@ -698,7 +765,13 @@ export class EditorController {
     this.clickHandler = (e) => {
       const ids = this.dataLayerRenderIds();
       if (!ids.length) return;
-      const hit = map.queryRenderedFeatures(e.point, { layers: ids }).find((h) => {
+      let hits: maplibregl.MapGeoJSONFeature[] = [];
+      try {
+        hits = map.queryRenderedFeatures(e.point, { layers: ids });
+      } catch {
+        return;
+      }
+      const hit = hits.find((h) => {
         const lid = layerIdFromSource(String(h.source));
         return lid && lid !== store().activeLayerId;
       });
@@ -706,10 +779,13 @@ export class EditorController {
       const layerId = layerIdFromSource(String(hit.source));
       const featureId = String(hit.properties?.id ?? '');
       if (!layerId || !featureId) return;
-      void this.setActiveLayer(layerId).then(() => {
-        this.gm.features.setSelection([featureId]);
-        store().setSelectedFeature(featureId);
-      });
+      void this.setActiveLayer(layerId)
+        .then(() => {
+          if (store().activeLayerId !== layerId) return;
+          this.gm.features.setSelection([featureId]);
+          store().setSelectedFeature(featureId);
+        })
+        .catch(() => {});
     };
     map.on('click', this.clickHandler);
   }
@@ -717,6 +793,10 @@ export class EditorController {
   async reset() {
     this.setHoverCursor(false);
     this.setCrossLayerSelect(false);
-    await Promise.all(store().layers.map((layer) => this.gm.dataLayers.remove(layer.id)));
+    await Promise.all(store().layers.map((layer) => this.gm.dataLayers.remove(layer.id))).catch(
+      (error) => {
+        console.warn('GIS: map was not fully reset', error);
+      },
+    );
   }
 }

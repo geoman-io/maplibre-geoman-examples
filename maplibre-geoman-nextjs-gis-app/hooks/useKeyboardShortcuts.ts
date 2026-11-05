@@ -40,7 +40,7 @@ export function useKeyboardShortcuts(gm: Geoman | null, controller: EditorContro
           void controller.deleteSelected();
         }
       } else if (key === 'escape') {
-        void gm.disableAllModes();
+        void gm.disableAllModes().catch(() => {});
         useEditorStore.getState().setActiveTool(null);
       }
     };

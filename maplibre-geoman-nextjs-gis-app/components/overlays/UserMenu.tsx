@@ -21,7 +21,9 @@ export default function UserMenu() {
         {user.name || user.email}
       </span>
       <button
-        onClick={() => signOut()}
+        onClick={() => {
+          void signOut().catch(() => {});
+        }}
         title="Sign out"
         aria-label="Sign out"
         className="ml-0.5 flex h-6 w-6 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"

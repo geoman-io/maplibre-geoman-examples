@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { asc, eq } from 'drizzle-orm';
+import { asc, count, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { layer } from '@/lib/db/schema';
-import { badRequest, getUser, unauthorized } from '@/lib/api';
+import { badRequest, getUser, payloadTooLarge, unauthorized } from '@/lib/api';
+import { isSafeKey } from '@/lib/geojson-guard';
 
 export async function GET() {
   const user = await getUser();
@@ -28,7 +29,7 @@ export const layerSchemaShape = z
     fields: z
       .array(
         z.object({
-          name: z.string().trim().min(1).max(60),
+          name: z.string().trim().min(1).max(60).refine(isSafeKey, { message: 'Reserved field name' }),
           type: z.enum(['string', 'number', 'integer', 'boolean', 'enum']),
           required: z.boolean().optional(),
           min: finite.optional(),
@@ -102,9 +103,13 @@ const createSchema = z.object({
 export async function POST(req: Request) {
   const user = await getUser();
   if (!user) return unauthorized();
+  if (payloadTooLarge(req)) return badRequest('Body too large');
 
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return badRequest(parsed.error.flatten());
+
+  const [{ n }] = await db.select({ n: count() }).from(layer).where(eq(layer.userId, user.id));
+  if (n >= 200) return badRequest('Layer limit reached');
 
   const [created] = await db
     .insert(layer)

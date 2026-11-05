@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { Feature } from 'geojson';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import type { EditorController } from '@/lib/geoman/editorController';
+import { isSafeKey, ownString } from '@/lib/geojson-guard';
 import { formatArea, formatLength, measureFeature } from '@/lib/measure';
 import type { FeatureDTO, LayerDTO, SchemaField } from '@/lib/types';
 
@@ -58,7 +59,7 @@ function Editor({
     const out: Record<string, string> = {};
     for (const { key, value } of extra) {
       const k = key.trim();
-      if (k) out[k] = value;
+      if (isSafeKey(k)) out[k] = value;
     }
     return out;
   };
@@ -125,7 +126,7 @@ function Editor({
             <Field
               key={field.name}
               field={field}
-              value={values[field.name] ?? ''}
+              value={ownString(values, field.name)}
               error={errors[field.name]}
               onChange={(v) => setValue(field.name, v)}
             />

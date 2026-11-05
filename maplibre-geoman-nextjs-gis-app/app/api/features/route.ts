@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { feature, layer } from '@/lib/db/schema';
-import { badRequest, getUser, notFound, unauthorized } from '@/lib/api';
-import { geometryFits, geometryProblem, MAX_ID_LENGTH } from '@/lib/geojson-guard';
+import { badRequest, getUser, notFound, payloadTooLarge, unauthorized } from '@/lib/api';
+import { geometryFits, geometryProblem, isSafeId, isSafeKey, MAX_ID_LENGTH, propertiesFit } from '@/lib/geojson-guard';
 
 export async function GET(req: Request) {
   const user = await getUser();
@@ -19,9 +19,14 @@ export async function GET(req: Request) {
   return NextResponse.json({ features });
 }
 
-const idSchema = z.string().trim().min(1).max(MAX_ID_LENGTH);
+const idSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(MAX_ID_LENGTH)
+  .refine(isSafeId, { message: 'Reserved id' });
 const metadataSchema = z
-  .record(z.string().max(120), z.string().max(2000))
+  .record(z.string().max(120).refine(isSafeKey, { message: 'Reserved attribute' }), z.string().max(2000))
   .refine((metadata) => Object.keys(metadata).length <= 100, { message: 'Too many attributes' })
   .optional();
 const geojsonSchema = z
@@ -33,7 +38,7 @@ const geojsonSchema = z
   .refine((feature) => geometryProblem(feature.geometry) === null, {
     message: 'Geometry is empty, non-finite, or not a drawable shape',
   })
-  .refine((feature) => JSON.stringify(feature.properties ?? {}).length <= 20_000, {
+  .refine((feature) => propertiesFit(feature.properties), {
     message: 'Feature properties are too large',
   });
 
@@ -48,6 +53,7 @@ const upsertSchema = z.object({
 export async function POST(req: Request) {
   const user = await getUser();
   if (!user) return unauthorized();
+  if (payloadTooLarge(req)) return badRequest('Body too large');
 
   const parsed = upsertSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return badRequest(parsed.error.flatten());
@@ -61,6 +67,18 @@ export async function POST(req: Request) {
   if (!owned) return notFound();
   if (!geometryFits(owned.geometryType, data.geojson.geometry)) {
     return badRequest('Geometry does not match the layer');
+  }
+
+  const [existing] = await db
+    .select({ id: feature.id })
+    .from(feature)
+    .where(and(eq(feature.userId, user.id), eq(feature.id, data.id)));
+  if (!existing) {
+    const [{ n }] = await db
+      .select({ n: count() })
+      .from(feature)
+      .where(eq(feature.userId, user.id));
+    if (n >= 5000) return badRequest('Feature limit reached');
   }
 
   const [saved] = await db

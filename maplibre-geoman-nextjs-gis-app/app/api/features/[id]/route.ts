@@ -3,8 +3,8 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { feature, layer } from '@/lib/db/schema';
-import { badRequest, getUser, notFound, unauthorized } from '@/lib/api';
-import { geometryFits, geometryProblem, MAX_ID_LENGTH } from '@/lib/geojson-guard';
+import { badRequest, getUser, notFound, payloadTooLarge, unauthorized } from '@/lib/api';
+import { geometryFits, geometryProblem, isSafeKey, MAX_ID_LENGTH, propertiesFit } from '@/lib/geojson-guard';
 
 const patchSchema = z.object({
   layerId: z.string().trim().min(1).max(MAX_ID_LENGTH).optional(),
@@ -18,9 +18,12 @@ const patchSchema = z.object({
     .refine((feature) => geometryProblem(feature.geometry) === null, {
       message: 'Geometry is empty, non-finite, or not a drawable shape',
     })
+    .refine((feature) => propertiesFit(feature.properties), {
+      message: 'Feature properties are too large',
+    })
     .optional(),
   metadata: z
-    .record(z.string().max(120), z.string().max(2000))
+    .record(z.string().max(120).refine(isSafeKey, { message: 'Reserved attribute' }), z.string().max(2000))
     .refine((metadata) => Object.keys(metadata).length <= 100, { message: 'Too many attributes' })
     .optional(),
 });
@@ -31,6 +34,7 @@ export async function PATCH(
 ) {
   const user = await getUser();
   if (!user) return unauthorized();
+  if (payloadTooLarge(req)) return badRequest('Body too large');
   const { id } = await params;
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));

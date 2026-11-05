@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { EditorController } from '@/lib/geoman/editorController';
+import { isSafeKey } from '@/lib/geojson-guard';
 import type { LayerDTO, SchemaField } from '@/lib/types';
 
 const TYPES: SchemaField['type'][] = ['string', 'number', 'integer', 'boolean', 'enum'];
@@ -36,7 +37,7 @@ export default function SchemaEditor({
         min: typeof f.min === 'number' && Number.isFinite(f.min) ? f.min : undefined,
         max: typeof f.max === 'number' && Number.isFinite(f.max) ? f.max : undefined,
       }))
-      .filter((f) => f.name && !seen.has(f.name) && seen.add(f.name));
+      .filter((f) => isSafeKey(f.name) && !seen.has(f.name) && seen.add(f.name));
     setSaving(true);
     try {
       await controller.setLayerSchema(layer, clean.length ? { fields: clean } : null);

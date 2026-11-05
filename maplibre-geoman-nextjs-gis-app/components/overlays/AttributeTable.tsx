@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import type { Feature } from 'geojson';
 import { useEditorStore } from '@/hooks/useEditorStore';
 import type { EditorController } from '@/lib/geoman/editorController';
+import { isSafeKey, ownString } from '@/lib/geojson-guard';
 import { downloadGeoJson, parseGeoJson } from '@/lib/io';
 
 export default function AttributeTable({
@@ -31,12 +32,14 @@ export default function AttributeTable({
   // Schema fields lead (in declared order, so empty cells still show a column),
   // then any extra ad-hoc metadata keys.
   const columns = useMemo(() => {
-    const schemaNames = (layer?.schema?.fields ?? []).map((f) => f.name);
+    const schemaNames = (Array.isArray(layer?.schema?.fields) ? layer.schema.fields : [])
+      .map((f) => f.name)
+      .filter((name) => isSafeKey(name));
     const keys = new Set<string>(schemaNames);
     for (const f of rows) {
       for (const k of Object.keys(f.metadata ?? {})) keys.add(k);
     }
-    const extra = [...keys].filter((k) => !schemaNames.includes(k)).sort();
+    const extra = [...keys].filter((k) => isSafeKey(k) && !schemaNames.includes(k)).sort().slice(0, 40);
     return [...schemaNames, ...extra];
   }, [rows, layer]);
   const fieldFor = (col: string) => layer?.schema?.fields.find((f) => f.name === col);
@@ -46,7 +49,7 @@ export default function AttributeTable({
     if (!q) return rows;
     return rows.filter(
       (f) =>
-        f.id.toLowerCase().includes(q) ||
+        String(f.id).toLowerCase().includes(q) ||
         Object.values(f.metadata ?? {}).some((v) => String(v).toLowerCase().includes(q)),
     );
   }, [rows, query]);
@@ -59,7 +62,7 @@ export default function AttributeTable({
 
   const addField = () => {
     const k = newField.trim();
-    if (!k || columns.includes(k) || rows.length === 0) return;
+    if (!isSafeKey(k) || columns.includes(k) || rows.length === 0) return;
     const f = rows[0];
     controller.updateFeatureMetadata(f.id, { ...(f.metadata ?? {}), [k]: '' });
     setNewField('');
@@ -188,7 +191,7 @@ export default function AttributeTable({
                 }`}
               >
                 <td className="px-3 py-1 font-mono text-xs text-zinc-400" title={f.id}>
-                  {f.id.slice(0, 8)}
+                  {String(f.id).slice(0, 8)}
                 </td>
                 <td className="px-3 py-1 text-zinc-600">{f.shape ?? '—'}</td>
                 {columns.map((c) => {
@@ -199,7 +202,7 @@ export default function AttributeTable({
                     <td key={c} className="px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
                       {field?.type === 'enum' ? (
                         <select
-                          defaultValue={(f.metadata ?? {})[c] ?? ''}
+                          defaultValue={ownString(f.metadata, c)}
                           onChange={(e) => commit(f.id, c, e.target.value)}
                           className={cls}
                         >
@@ -213,7 +216,7 @@ export default function AttributeTable({
                       ) : (
                         <input
                           type={field?.type === 'number' || field?.type === 'integer' ? 'number' : 'text'}
-                          defaultValue={(f.metadata ?? {})[c] ?? ''}
+                          defaultValue={ownString(f.metadata, c)}
                           onBlur={(e) => commit(f.id, c, e.target.value)}
                           className={cls}
                         />

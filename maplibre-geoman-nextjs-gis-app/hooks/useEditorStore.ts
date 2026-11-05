@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { isSafeId } from '@/lib/geojson-guard';
 import type { FeatureDTO, LayerDTO } from '@/lib/types';
 
 type EditorState = {
@@ -76,9 +77,18 @@ export const useEditorStore = create<EditorState>((set) => ({
   setActiveLayer: (activeLayerId) => set({ activeLayerId }),
 
   setFeatures: (list) =>
-    set({ features: Object.fromEntries(list.map((f) => [f.id, f])) }),
+    set({
+      features: Object.fromEntries(
+        list
+          .filter((feature) => feature && typeof feature.id === 'string' && isSafeId(feature.id))
+          .map((feature) => [feature.id, feature]),
+      ),
+    }),
   upsertFeature: (feature) =>
-    set((s) => ({ features: { ...s.features, [feature.id]: feature } })),
+    set((s) => {
+      if (!isSafeId(String(feature.id))) return s;
+      return { features: { ...s.features, [feature.id]: feature } };
+    }),
   removeFeature: (id) =>
     set((s) => {
       const features = { ...s.features };

@@ -121,6 +121,13 @@ export const useConfig = create<ConfigStore>()(
       ...DEFAULT_CONFIG,
       set: (patch) => set(patch),
     }),
-    { name: 'gis-config', version: 1 },
+    {
+      name: 'gis-config',
+      version: 1,
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<Config>;
+        return { ...current, ...saved, snapTolerance: clampSnapTolerance(saved.snapTolerance) };
+      },
+    },
   ),
 );
