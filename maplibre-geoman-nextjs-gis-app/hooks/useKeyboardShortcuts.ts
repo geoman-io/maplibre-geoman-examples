@@ -9,7 +9,7 @@ const isTyping = (el: EventTarget | null) => {
   const node = el as HTMLElement | null;
   if (!node) return false;
   const tag = node.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || node.isContentEditable;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || node.isContentEditable;
 };
 
 /** Standard GIS keyboard shortcuts, wired to the editor controller. */
@@ -19,6 +19,12 @@ export function useKeyboardShortcuts(gm: Geoman | null, controller: EditorContro
 
     const onKey = (e: KeyboardEvent) => {
       if (isTyping(e.target)) return;
+      // Geoman handles map-scoped history/delete/draw keys in capture phase.
+      // Replaying the same key here ran Undo twice (or deleted while drawing).
+      if (e.defaultPrevented) {
+        if (e.key === 'Escape') useEditorStore.getState().setActiveTool(null);
+        return;
+      }
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
 
