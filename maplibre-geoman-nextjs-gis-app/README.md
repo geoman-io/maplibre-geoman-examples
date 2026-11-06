@@ -112,6 +112,9 @@ feature's own layer and saves it; `gm:editend`/`dragend`/`rotateend`/`scaleend`/
 persist geometry changes; `gm:remove` deletes; `gm:selection` opens the metadata
 editor. Undo/redo update events are persisted too, so reloading does not bring
 back an undone geometry. Pasting uses the same history-aware create path as drawing.
+Writes are serialized per feature, including pending creates and deletes, so an
+immediate Undo cannot resurrect a paste when a slow request returns. New input is
+blocked during display/edit transitions; repeated undo/redo requests are queued.
 
 ## Deploying to Vercel
 

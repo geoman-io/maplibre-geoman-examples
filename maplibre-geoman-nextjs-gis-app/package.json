@@ -15,7 +15,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "e2e": "playwright test",
-    "test:unit": "tsx --test lib/geojson-guard.test.ts",
+    "test:unit": "tsx --test lib/geojson-guard.test.ts lib/geoman/featureWriteQueue.test.ts",
     "e2e:ui": "playwright test --ui",
     "relink": "pnpm --dir ../../maplibre-geoman-pro --filter @geoman-io/maplibre-geoman-pro build && rm -rf node_modules pnpm-lock.yaml .next && pnpm install",
     "dev:fresh": "pnpm relink && pnpm dev"
