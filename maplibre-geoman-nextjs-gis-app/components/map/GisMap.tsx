@@ -32,6 +32,9 @@ function buildGmOptions(): NonNullable<ConstructorParameters<typeof Geoman>[1]> 
       // Globally-unique feature ids so they never collide across layers/reloads
       // (features are keyed by id in the DB with a (userId, id) primary key).
       idGenerator: () => crypto.randomUUID(),
+      // Host history temporarily materializes inactive display layers for a
+      // replay. Keep other engine shortcuts (Enter, arrows, Backspace) enabled.
+      keyboard: { bindings: { undo: [], redo: [] } },
       // Snap distance + schema/geometry enforcement come from the persisted config.
       snapDistance: clampSnapTolerance(c.snapTolerance),
       validateSchema: c.validateSchema,

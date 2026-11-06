@@ -16,9 +16,9 @@ editor, auth and persistence — is custom application code.
   customize **fill _and_ border** colours (applied live), and toggle visibility.
   Display and editing are separated: every layer is drawn by its own native
   MapLibre source + fill/line/circle layers, while exactly one active layer is
-  loaded into Geoman for editing (its native source is emptied so it isn't drawn
-  twice). Switching the active layer commits the previous one back to its
-  display layers and loads the next into Geoman.
+  loaded into Geoman for editing. Switching the active layer keeps the same
+  source and style layers. Undo/redo temporarily materializes inactive layers
+  so a history step still addresses the feature in its original layer.
 - **Per-feature metadata editor** — edit an arbitrary `string → string` map on
   the selected feature; written to the feature's properties and persisted.
 - **GitHub auth** via [Better Auth](https://better-auth.com); data is **private
@@ -65,6 +65,11 @@ GitHub app required. To use GitHub locally, create an OAuth app with callback
 `http://localhost:3000/api/auth/callback/github` and set `GITHUB_CLIENT_ID` /
 `GITHUB_CLIENT_SECRET`.
 
+The dev command copies MapLibre's worker into `public/vendor/maplibre` before
+starting, just like the production build. If you use another port, set
+`BETTER_AUTH_URL` to that origin in `.env.local` (for example,
+`http://localhost:3002`) or Better Auth will reject sign-in.
+
 ## Scripts
 
 | Script                   | Purpose                                  |
@@ -78,6 +83,16 @@ GitHub app required. To use GitHub locally, create an OAuth app with callback
 | `pnpm e2e`               | Run Playwright tests (boots DB + server) |
 | `pnpm lint`              | ESLint                                   |
 
+The browser suite exercises draw, copy/paste, drag, scale, rotate, vertex edits,
+undo/redo, switching layers and reload persistence, plus activation smoke tests
+for the remaining toolbar tools. To reuse a server on a different port:
+
+```bash
+PLAYWRIGHT_BASE_URL=http://localhost:3002 pnpm e2e
+```
+
+`PLAYWRIGHT_EXECUTABLE_PATH` optionally selects an already-installed Chromium.
+
 ## How it fits together
 
 ```
@@ -85,8 +100,6 @@ components/map/GisMap.tsx          MapLibre + Geoman Pro init (no default UI, UU
 components/map/MapView.tsx         Controller lifecycle + overlay layout
 components/overlays/*              Custom UI: Toolbar, LayerPanel, MetadataEditor, SignInPanel, UserMenu
 lib/geoman/editorController.ts     Display ⇄ edit split, layer ops, gm:* event wiring
-lib/geoman/displayLayers.ts        Native MapLibre source/layers per app-layer
-lib/geoman/geomanRender.ts         Recolour/hide the active layer's gm_main layers
 lib/geoman/featureSync.ts          Read drawn features / import-back / find by id
 hooks/useEditorStore.ts            Zustand store (client source of truth)
 lib/api-client.ts                  Typed fetch wrappers for the REST API
@@ -95,9 +108,13 @@ lib/{auth,db}                      Better Auth + Drizzle
 ```
 
 Geoman events drive persistence: `gm:create` assigns the new feature to the
-active layer and saves it; `gm:editend`/`dragend`/`rotateend`/`scaleend`/`cut`
+feature's own layer and saves it; `gm:editend`/`dragend`/`rotateend`/`scaleend`/`cut`
 persist geometry changes; `gm:remove` deletes; `gm:selection` opens the metadata
-editor.
+editor. Undo/redo update events are persisted too, so reloading does not bring
+back an undone geometry. Pasting uses the same history-aware create path as drawing.
+Writes are serialized per feature, including pending creates and deletes, so an
+immediate Undo cannot resurrect a paste when a slow request returns. New input is
+blocked during display/edit transitions; repeated undo/redo requests are queued.
 
 ## Deploying to Vercel
 
@@ -105,13 +122,12 @@ editor.
 2. Set env vars: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (your deploy URL),
    `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and a GitHub OAuth app whose
    callback is `https://<your-domain>/api/auth/callback/github`.
-3. **Private registry on CI**: append an auth line to `.npmrc` that references an
-   env var, and set it in Vercel:
-   ```ini
-   //npm.geoman.io/:_authToken=${GEOMAN_NPM_TOKEN}
+3. **Private registry on CI**: set `NPM_TOKEN_GEOMAN` in Vercel's Production,
+   Preview and Development environments. Apply it before installing; pnpm 11
+   does not expand an environment variable placeholder in the committed `.npmrc`:
+   ```bash
+   pnpm config set "//npm.geoman.io/:_authToken" "$NPM_TOKEN_GEOMAN" && pnpm install --frozen-lockfile
    ```
-   (left out of the committed `.npmrc` so local installs keep using your machine
-   token; add it for the Vercel build and set `GEOMAN_NPM_TOKEN`.)
 4. Run `pnpm db:migrate` against the production database once.
 
 This app is intentionally **standalone** (its own lockfile and `.npmrc`) and is

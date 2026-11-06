@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -8,13 +10,16 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
+    launchOptions: process.env.PLAYWRIGHT_EXECUTABLE_PATH
+      ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+      : {},
   },
   webServer: {
     // Ensures the dev DB is up, then runs the dev server (email/password auth on).
-    command: 'pnpm db:up && pnpm dev',
-    url: 'http://localhost:3000',
+    command: `pnpm db:up && pnpm dev --port ${new URL(baseURL).port || '3000'}`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

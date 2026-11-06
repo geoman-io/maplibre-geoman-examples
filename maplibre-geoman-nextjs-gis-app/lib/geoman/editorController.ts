@@ -14,6 +14,7 @@ import { useEditorStore } from '@/hooks/useEditorStore';
 import { clampSnapTolerance, DEFAULT_CONFIG, type Config } from '@/hooks/useConfig';
 import * as api from '@/lib/api-client';
 import { findFeature, readFeatureData } from '@/lib/geoman/featureSync';
+import { FeatureWriteQueue } from '@/lib/geoman/featureWriteQueue';
 import { geometryFits, geometryProblem, isUsableFeature, stringMetadata } from '@/lib/geojson-guard';
 import { featureBounds, inferShape, nudgeGeometry } from '@/lib/io';
 import { fillExpression, matchesFilter } from '@/lib/symbology';
@@ -145,6 +146,31 @@ const compileStyle = (layer: LayerDTO): DataLayerStyle => {
 export class EditorController {
   constructor(private gm: Geoman) {}
 
+  private featureWrites = new FeatureWriteQueue();
+  private layerBusy = false;
+
+  private blockLayerInput = (event: Event) => {
+    if (!this.layerBusy) return;
+    // Queue repeated undo/redo, but do not let new mutations bypass the lock
+    // through the engine's capture-phase keyboard handlers or toolbar clicks.
+    if (event instanceof KeyboardEvent && (event.ctrlKey || event.metaKey) &&
+        ['z', 'y'].includes(event.key.toLowerCase())) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+
+  private async layerOperation<T>(run: () => Promise<T>): Promise<T> {
+    this.layerBusy = true;
+    try {
+      await this.gm.disableAllModes();
+      store().setActiveTool(null);
+      await this.gm.events.flushForwarding();
+      return await run();
+    } finally {
+      this.layerBusy = false;
+    }
+  }
+
   async hydrate() {
     try {
       const [layers, features] = await Promise.all([api.listLayers(), api.listFeatures()]);
@@ -182,6 +208,9 @@ export class EditorController {
 
   private wireEvents() {
     const map = this.gm.mapAdapter.getMapInstance() as unknown as maplibregl.Map;
+    for (const type of ['pointerdown', 'click', 'dblclick', 'keydown']) {
+      window.addEventListener(type, this.blockLayerInput, { capture: true });
+    }
 
     this.gm.mapAdapter.on('gm:create', async (e: { feature: FeatureData; shape?: string }) => {
       const layerId = layerIdFromSource(e.feature.source.id) ?? store().activeLayerId;
@@ -190,44 +219,50 @@ export class EditorController {
       // would record a second history entry, making one draw take two undos).
       const read = readFeatureData(e.feature);
       if (geometryProblem(read.geojson.geometry)) return;
-      const dto = await api
-        .upsertFeature({
+      await this.featureWrites.enqueue(read.id, () => api.upsertFeature({
           id: read.id,
           layerId,
           shape: e.shape ?? read.shape,
           geojson: read.geojson,
           metadata: read.metadata,
-        })
-        .catch(() => null);
-      if (!dto) return;
-      store().upsertFeature(dto);
-      store().setSelectedFeature(read.id);
+        }), (dto) => {
+          store().upsertFeature(dto);
+          store().setSelectedFeature(read.id);
+        });
     });
 
     const onUpdate = async (e: { feature?: FeatureData; features?: FeatureData[] }) => {
       for (const fd of e.feature ? [e.feature] : (e.features ?? [])) {
         const read = readFeatureData(fd);
-        if (!store().features[read.id]) continue;
+        if (!store().features[read.id] && !this.featureWrites.has(read.id)) continue;
         if (geometryProblem(read.geojson.geometry)) continue;
-        const dto = await api
-          .updateFeature(read.id, {
+        void this.featureWrites.enqueue(read.id, () => api.updateFeature(read.id, {
             geojson: read.geojson,
             shape: read.shape,
             metadata: read.metadata,
-          })
-          .catch(() => null);
-        if (dto) store().upsertFeature(dto);
+          }), (dto) => store().upsertFeature(dto));
       }
     };
     for (const ev of ['gm:editend', 'gm:dragend', 'gm:rotateend', 'gm:scaleend', 'gm:cut'] as const) {
       map.on(ev as never, onUpdate);
     }
+    // History replays emit feature_updated, not an interactive *end event.
+    // Persist those snapshots too; otherwise a reload silently undoes Undo.
+    map.on('_gm:edit' as never, (e: {
+      action?: string;
+      origin?: string;
+      targetFeatures?: FeatureData[];
+    }) => {
+      if (e.action === 'feature_updated' && (e.origin === 'undo' || e.origin === 'redo')) {
+        void onUpdate({ features: e.targetFeatures });
+      }
+    });
 
     this.gm.mapAdapter.on('gm:remove', async (e: { feature: FeatureData }) => {
       const id = String(e.feature.id);
-      if (!store().features[id]) return;
+      if (!store().features[id] && !this.featureWrites.has(id)) return;
       store().removeFeature(id);
-      await api.deleteFeature(id).catch(() => {});
+      await this.featureWrites.enqueue(id, () => api.deleteFeature(id), () => {});
     });
 
     this.gm.mapAdapter.on('gm:selection', (e: { selection: Array<string | number> }) => {
@@ -243,11 +278,63 @@ export class EditorController {
   }
 
   undo() {
-    return this.gm.history.undo();
+    return this.replayHistory('undo');
   }
 
   redo() {
-    return this.gm.history.redo();
+    return this.replayHistory('redo');
+  }
+
+  /** Presentation changes must not become undoable feature deletions. */
+  private async syncLayers(run: () => Promise<void>) {
+    const previous = this.gm.history.replaying;
+    this.gm.history.replaying = true;
+    try {
+      await run();
+    } finally {
+      this.gm.history.replaying = previous;
+    }
+  }
+
+  private layerQueue: Promise<unknown> = Promise.resolve();
+
+  private replayHistory(direction: 'undo' | 'redo') {
+    const run = this.layerQueue.then(() => this.layerOperation(async () => {
+      // Inactive layers are display-only, absent from the featureStore. Bring
+      // them back just for replay so undo can address their stable feature ids.
+      const inactive = store().layers.filter((layer) =>
+        this.gm.dataLayers.get(layer.id)?.editable === false,
+      );
+      const promoted: LayerDTO[] = [];
+      try {
+        await this.syncLayers(async () => {
+          for (const layer of inactive) {
+            try {
+              await this.gm.dataLayers.setEditable(layer.id, true);
+              promoted.push(layer);
+            } catch (error) {
+              console.warn('GIS: skipped an invalid history layer', layer.id, error);
+            }
+          }
+        });
+        return await this.gm.history[direction]();
+      } finally {
+        // Replay events still reference these sources. Forward them while the
+        // sources remain editable so create/remove persistence can read them.
+        try {
+          await this.gm.events.flushForwarding();
+        } finally {
+          await this.syncLayers(async () => {
+            for (const layer of promoted) await this.gm.dataLayers.setEditable(layer.id, false);
+          });
+        }
+      }
+    }));
+    this.layerQueue = run.catch(() => {});
+    return run.catch((error) => {
+      console.warn('GIS: history replay failed', error);
+      return false;
+    });
   }
 
   /** Copy the selected feature's geometry to the in-app clipboard (Ctrl+C). */
@@ -261,6 +348,7 @@ export class EditorController {
   /** Paste the clipboard geometry as a new feature in the active layer, nudged
    *  slightly south-east so it doesn't land exactly on the original (Ctrl+V). */
   async paste() {
+    if (this.layerBusy) return;
     try {
       const clip = store().clipboard as Feature | null;
       const layerId = store().activeLayerId;
@@ -272,16 +360,16 @@ export class EditorController {
       if (!shape) return;
       const id = crypto.randomUUID();
       const geojson: Feature = { type: 'Feature', properties: {}, geometry };
-      const dto = await api.upsertFeature({
-        id,
-        layerId,
-        shape,
-        geojson,
-        metadata: {},
+      // Use the same undoable create path as drawing. Saving then setData()
+      // imported the paste without recording history, so Undo left it behind.
+      await this.gm.features.createFeature({
+        featureId: id,
+        sourceName: `${SOURCE_PREFIX}${layerId}`,
+        shapeGeoJson: {
+          ...geojson,
+          properties: { shape, metadata: {} },
+        } as never,
       });
-      store().upsertFeature(dto);
-      this.pushLayerData(layerId);
-      store().setSelectedFeature(id);
     } catch {
       // A rejected save (wrong layer, dateline, offline) must not reject Ctrl+V.
     }
@@ -432,18 +520,26 @@ export class EditorController {
     return this.gm.dataLayers.validate(layerId, props);
   }
 
-  async setActiveLayer(id: string) {
+  setActiveLayer(id: string) {
+    const run = this.layerQueue.then(() => this.layerOperation(() => this.switchActiveLayer(id)));
+    this.layerQueue = run.catch(() => {});
+    return run.catch((error) => console.warn('GIS: layer switch failed', id, error));
+  }
+
+  private async switchActiveLayer(id: string) {
     const prev = store().activeLayerId;
     if (prev === id) return;
     store().setSelectedFeature(null);
 
     try {
       // Flip kinds in place (engine handles marker cleanup + registration).
-      if (prev) await this.gm.dataLayers.setEditable(prev, false);
-      await this.gm.dataLayers.setEditable(id, true);
+      await this.syncLayers(async () => {
+        if (prev) await this.gm.dataLayers.setEditable(prev, false);
+        await this.gm.dataLayers.setEditable(id, true);
       // setEditable(true) only flips registration; load this layer's features
       // from our authoritative store into the editable featureStore.
-      this.pushLayerData(id);
+        await this.pushLayerData(id);
+      });
       this.gm.dataLayers.setActive(id);
       store().setActiveLayer(id);
     } catch (error) {
@@ -578,7 +674,8 @@ export class EditorController {
       await fd?.updateProperties({ metadata });
       const f = store().features[id];
       if (f) store().upsertFeature({ ...f, metadata });
-      await api.updateFeature(id, { metadata });
+      await this.featureWrites.enqueue(id, () => api.updateFeature(id, { metadata }),
+        (dto) => store().upsertFeature(dto));
     } catch (error) {
       console.warn('GIS: attributes were not saved', id, error);
     }
@@ -648,11 +745,9 @@ export class EditorController {
     this.map().fitBounds(bounds, { padding: 96, maxZoom, duration: 600 });
   }
 
-  private pushLayerData(layerId: string) {
+  private async pushLayerData(layerId: string) {
     try {
-      void Promise.resolve(this.gm.dataLayers.setData(layerId, geoJsonFor(layerId))).catch((error) => {
-        console.warn('GIS: layer data was not applied', layerId, error);
-      });
+      await this.gm.dataLayers.setData(layerId, geoJsonFor(layerId));
     } catch (error) {
       console.warn('GIS: layer data was not applied', layerId, error);
     }
@@ -811,6 +906,9 @@ export class EditorController {
   }
 
   async reset() {
+    for (const type of ['pointerdown', 'click', 'dblclick', 'keydown']) {
+      window.removeEventListener(type, this.blockLayerInput, { capture: true });
+    }
     this.setHoverCursor(false);
     this.setCrossLayerSelect(false);
     await Promise.all(store().layers.map((layer) => this.gm.dataLayers.remove(layer.id))).catch(
